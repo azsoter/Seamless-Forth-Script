@@ -39,9 +39,14 @@ void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code)
 {
     jmp_buf *handler = (jmp_buf *)(ctx->throw_handler);
 
-    // **TODO** needs some sort of assert() here if 0 == handler.
     if (0 != code)
     {
+        if (0 == handler)
+        {
+            forth_quit(ctx);
+        }
+    
+        // **TODO** still need to handle ABORT" (code = -2).
         longjmp(*handler, (int)code);
     }
 }
@@ -85,6 +90,12 @@ void forth_execute(forth_runtime_context_t *ctx)
     entry->behavior(ctx);
 }
 
+// ABORT ( -- )
+void forth_abort(forth_runtime_context_t *ctx)
+{
+    forth_THROW(ctx, -1);
+}
+
 // THROW ( code|0 -- )
 void forth_throw(forth_runtime_context_t *ctx)
 {
@@ -117,6 +128,12 @@ void forth_catch(forth_runtime_context_t *ctx)
     }
 
     ctx->throw_handler = saved_handler;
+}
+
+// DEPTH ( -- depth )
+void forth_depth(forth_runtime_context_t *ctx)
+{
+    forth_PUSH(ctx, (forth_cell_t)(ctx->sp0 - ctx->sp));
 }
 
 // DUP ( x -- x x )
@@ -496,33 +513,6 @@ void forth_spaces(forth_runtime_context_t *ctx)
     }
 }
 
-/*
-forth_scell_t forth_query(forth_runtime_context_t *ctx)
-{
-	forth_scell_t len;
-	ctx->blk = 0;
-	ctx->source_id = 0;
-	ctx->source_address = ctx->tib;
-	ctx->source_length = 0;
-	ctx->to_in = 0;
-    forth_PUSH(ctx, (forth_cell_t)(ctx->tib));
-    forth_PUSH(ctx, FORTH_TIB_SIZE);
-    forth_accept(ctx);
-	len = (forth_scell_t)forth_POP(ctx);
-
-	if (0 > len)
-	{
-		ctx->tib_count = 0;
-	}
-	else
-	{
-		ctx->tib_count = len;
-		ctx->source_length = ctx->tib_count;
-	}
-
-	return len;
-}
-*/
 // REFILL ( -- flag )
 void forth_refill(forth_runtime_context_t *ctx)
 {
@@ -786,6 +776,83 @@ void forth_hdot(forth_runtime_context_t *ctx)
 void forth_dots(forth_runtime_context_t *ctx)
 {
     int res = forth_DOTS(ctx);
+    if (0 > res)
+    {
+        forth_THROW(ctx, -57);
+    }
+}
+
+int forth_DUMP(struct forth_runtime_context *ctx, const char *addr, forth_cell_t len)
+{
+	char byte_buffer[3];
+	char buff[8];
+	forth_cell_t i;
+	char c;
+	forth_cell_t cnt;
+
+	byte_buffer[2] = FORTH_CHAR_SPACE;
+
+	if (0 == len)
+	{
+		return 0;
+	}
+
+	for(i = 0; i < len; i++)
+	{
+ 		if ( 0 == (i % 8))
+	 	{
+			if (i)
+            {
+                if (0 > ctx->write_string(ctx, buff,8))
+				{
+					return -1;
+				}
+            }
+			ctx->send_cr(ctx);
+			forth_HDOT(ctx, (forth_cell_t)addr);
+            forth_TYPE0(ctx, ": "); 
+			memset(buff,FORTH_CHAR_SPACE, 8);
+	 	}
+		c = *addr++;
+		// Check for printable characters.
+ 		buff[i % 8] = ( (c <128) && (c>31) ) ? c : '.';
+		byte_buffer[0] = forth_VAL2DIGIT(0x0F & (c >> 4));
+		byte_buffer[1] = forth_VAL2DIGIT(0x0F & c);
+      	if (0 > ctx->write_string(ctx, byte_buffer, 3))
+		{
+			return -1;
+		}
+    }
+
+	cnt = (i % 8) ? (i % 8) : 8;
+
+	if (8 != cnt)
+	{
+		byte_buffer[0] = FORTH_CHAR_SPACE;
+		byte_buffer[1] = FORTH_CHAR_SPACE;
+
+		for (i = (8 - cnt); i != 0; i--)
+		{
+      		if (0 > ctx->write_string(ctx, byte_buffer, 3))
+			{
+				return -1;
+			}
+		}		
+	}
+
+   	ctx->write_string(ctx, buff, cnt);
+	return ctx->send_cr(ctx);
+}
+
+// DUMP ( addr count -- )
+void forth_dump(forth_runtime_context_t *ctx)
+{
+    int res;
+    forth_cell_t count = forth_POP(ctx);
+    forth_cell_t addr = forth_POP(ctx);
+
+    res = forth_DUMP(ctx, (const char *)addr, count);
+
     if (0 > res)
     {
         forth_THROW(ctx, -57);
@@ -1102,6 +1169,14 @@ void forth_paren(forth_runtime_context_t *ctx)
     forth_drop(ctx);
     forth_drop(ctx);
 }
+
+// .( ( "string" -- )
+void forth_dot_paren(forth_runtime_context_t *ctx)
+{
+    forth_PUSH(ctx, (forth_cell_t)')');
+    forth_parse(ctx);
+    forth_type(ctx);
+}
 // ---------------------------------------------------------------------------------------------------------------
 void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 {
@@ -1326,13 +1401,29 @@ void forth_words(forth_runtime_context_t *ctx)
     forth_cr(ctx);
 }
 
+void forth_tick(forth_runtime_context_t *ctx)
+{
+    forth_parse_name(ctx);
+    forth_find_name(ctx);
+    if (0 == ctx->sp[0])
+    {
+        forth_THROW(ctx, -13);
+    }
+}
+
 const forth_vocabulary_entry_t forth_wl_forth[] =
 {
     { "quit",       0, forth_quit,          "( -- )" },
     { "bye",        0, forth_bye,           "( -- )" },
+
+    { "(",          0, forth_paren,         " ( -- )"},
+    { ".(",         0, forth_dot_paren,     " ( -- )"},
+
     { "execute",    0, forth_execute,       "( xt -- )" },
     { "catch",      0, forth_catch,         "( xt -- code )" },
     { "throw",      0, forth_throw,         "( code -- )" },
+    { "abort",      0, forth_abort,         "( -- )" },
+    { "depth",      0, forth_depth,         "( -- depth )"},
     { "dup",        0, forth_dup,           "( x -- x x )"},
     { "drop",       0, forth_drop,          "( x -- x )"},
     { "swap",       0, forth_swap,          "( x y -- y x )"},
@@ -1356,10 +1447,12 @@ const forth_vocabulary_entry_t forth_wl_forth[] =
     { "space",      0, forth_space,         "( -- )" },
     { "spaces",     0, forth_spaces,        "( n -- )" },
 
-    { ".s",         0, forth_dots,          "( -- )" },
+
     { ".",          0, forth_dot,           "( x -- )" },
     { "h.",         0, forth_hdot,          "( x -- )" },
     { "u.",         0, forth_udot,          "( x -- )" },
+    { ".s",         0, forth_dots,          "( -- )" },
+    { "dump",       0, forth_dump,          "( addr count -- )" },
 
     { "key?",       0, forth_key_q,         "( -- flag )" },
     { "key",        0, forth_key,           "( -- key )" },
@@ -1372,8 +1465,10 @@ const forth_vocabulary_entry_t forth_wl_forth[] =
     { "parse",      0, forth_parse,         "( char -- c-addr len )" },
     { "parse-name", 0, forth_parse_name,    "( \"name\" -- c-addr len )" },
     { "find-name",  0, forth_find_name,     "( c-addr len -- xt|0)" },
+    { "'",          0, forth_tick,          "( \"name\" -- xt )" },
     { "interpret",  0, forth_interpret,     "( -- )" },
     { ".error",     0, forth_print_error,   "( error_code -- )"},
+
 
     { "words",      0, forth_words,          "( -- )" },
     { "help",       0, forth_help,          "( -- )" },

@@ -75,7 +75,7 @@ const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
 void forth_find_name(struct forth_runtime_context *ctx)
 {
     const forth_vocabulary_entry_t **wl = forth_master_list_of_lists;
-    const forth_vocabulary_entry_t *ep;
+    const forth_vocabulary_entry_t *ep = 0;
     forth_cell_t len = forth_POP(ctx);
     forth_cell_t addr = forth_POP(ctx);
 

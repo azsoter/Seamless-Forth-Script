@@ -124,6 +124,7 @@ extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
 extern void forth_execute(forth_runtime_context_t *ctx);
 extern void forth_catch(forth_runtime_context_t *ctx);
 extern void forth_throw(forth_runtime_context_t *ctx);
+extern void forth_abort(forth_runtime_context_t *ctx);
 extern void forth_print_error(forth_runtime_context_t *ctx);
 extern void forth_type(forth_runtime_context_t *ctx);
 extern void forth_emit(forth_runtime_context_t *ctx);
@@ -143,12 +144,15 @@ extern void forth_accept(forth_runtime_context_t *ctx);
 extern void forth_refill(forth_runtime_context_t *ctx);
 extern void forth_space(forth_runtime_context_t *ctx);
 extern void forth_spaces(forth_runtime_context_t *ctx);
+extern void forth_dump(forth_runtime_context_t *ctx);
 
 extern void forth_parse(forth_runtime_context_t *ctx);
 // extern void forth_parse_word(forth_runtime_context_t *ctx);
 extern void forth_parse_name(forth_runtime_context_t *ctx);
 extern void forth_paren(forth_runtime_context_t *ctx);
+extern void forth_dot_paren(forth_runtime_context_t *ctx);
 
+extern void forth_depth(forth_runtime_context_t *ctx);
 extern void forth_dup(forth_runtime_context_t *ctx);
 extern void forth_drop(forth_runtime_context_t *ctx);
 extern void forth_swap(forth_runtime_context_t *ctx);
@@ -168,6 +172,7 @@ extern void forth_or(forth_runtime_context_t *ctx);
 extern void forth_xor(forth_runtime_context_t *ctx);
 
 extern void forth_find_name(struct forth_runtime_context *ctx);
+extern void forth_tick(forth_runtime_context_t *ctx);
 
 extern void forth_words(forth_runtime_context_t *ctx);
 extern void forth_help(forth_runtime_context_t *ctx);
