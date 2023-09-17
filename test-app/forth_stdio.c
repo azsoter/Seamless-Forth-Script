@@ -185,7 +185,7 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 	rctx->extra.selector = FORTH_FEATURE_SELECTOR_TELNET;
 	rctx->extra.caller_context = 0;
 #endif
-    res = forth(rctx, cmd);
+    res = forth(rctx, cmd, strlen(cmd), 1);
 
 //   	free(ctx);
     return res;

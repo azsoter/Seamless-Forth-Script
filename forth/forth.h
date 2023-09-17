@@ -48,6 +48,6 @@ typedef struct forth_runtime_context forth_runtime_context_t;
 //extern int forth_execute_xt(forth_runtime_context_t *ctx, forth_xt_t xt);
 //extern int forth_evaluate(forth_runtime_context_t *ctx, const char *cmd);
 
-extern int forth(forth_runtime_context_t *ctx, const char *cmd);
+extern int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack);
 
 #endif

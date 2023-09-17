@@ -1333,16 +1333,15 @@ void forth_bye(forth_runtime_context_t *ctx)
     longjmp(*handler, -1);
 }
 // ---------------------------------------------------------------------------------------------------------------
-forth_cell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
+forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
 {
-    forth_cell_t res;
+    forth_scell_t res;
     
-    // This PUSH discards 'const' from the pointer but options are limited, see FIND-NAME for details.
-    forth_PUSH(ctx, (forth_cell_t)(&forth_interpret_xt));   // ' INTERPRET
-    forth_catch(ctx);                                       // CATCH
-    res = *(ctx->sp);
-    forth_PRINT_ERROR(ctx, res);                            // .ERROR
-    ctx->sp++;
+    // We are discarding the 'const' qualifier from the pointer
+    // but our options are limited,
+    //see FIND-NAME for details.
+    res = forth_CATCH(ctx, (forth_xt_t)&forth_interpret_xt);
+    forth_PRINT_ERROR(ctx, res);
     return res;
 }
 
@@ -1510,11 +1509,24 @@ const forth_vocabulary_entry_t forth_wl_forth[] =
 const forth_vocabulary_entry_t forth_interpret_xt =     { "INTERPRET",  0, forth_interpret,      "( -- )" };
 
 // Interpret the text in CMD.
-// Returns 0 on success and a non-zero value (which is a code from CATCH/THROW) if an error has occured.
-int forth(forth_runtime_context_t *ctx, const char *cmd)
+// The command is passed as address and length (so we can interpret substrings inside some bigger buffer).
+// A flag is passed to indicate if the data stack in the context needs to be emtied before running the command.
+//
+// This function returns 0 on success and a non-zero value (which is a code from CATCH/THROW) if an error has occured.
+int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack)
 {
     forth_cell_t res;
     jmp_buf frame;
+
+    if (0 == cmd_length)
+    {
+        return 0;
+    }
+
+    if (0 == cmd)
+    {
+        return -9; // Invalid memory address, is there anything better here?
+    }
 
     ctx->bye_handler = 0;
     ctx->quit_handler = 0;
@@ -1528,33 +1540,25 @@ int forth(forth_runtime_context_t *ctx, const char *cmd)
     ctx->bye_handler = (forth_ucell_t)(&frame);
 
     ctx->rp = ctx->rp0;
-    ctx->sp = ctx->sp0;
+
+    if (clear_stack)
+    {
+        ctx->sp = ctx->sp0;
+    }
 
 #if 0
-    // ------------------------------------------
-    cmd = ".s help h. 5 6 -8 cr quit";
-    forth_PUSH(ctx, 1);
-    forth_PUSH(ctx, 2);
-    forth_PUSH(ctx, 0x8765432112345678);
-    // ---------------------------------------------
+    cmd = " 1 2 3 4 xxx";
+    cmd_length = strlen(cmd);
 #endif
-    //cmd = " 1 2 3 4 xxx";
     ctx->to_in = 0;
     ctx->source_address = cmd;
-    ctx->source_length = strlen(cmd);
+    ctx->source_length = cmd_length;
 	ctx->source_id = -1;
 	ctx->blk = 0;
 
-    // res = forth_RUN_INTERPRET(ctx);
-    // This discards 'const' from the pointer but options are limited, see FIND-NAME for details.
-#if 0
-    forth_PUSH(ctx, (forth_cell_t)(&forth_interpret_xt));   // ' INTERPRET
-    forth_catch(ctx);                                       // CATCH
-    res = *(ctx->sp);
-#else
-    res = forth_CATCH(ctx, (forth_xt_t)&forth_interpret_xt);
-#endif
-    forth_DOTS(ctx);
-    forth_PRINT_ERROR(ctx, res);                            // .ERROR
-    return res;
+    res = forth_RUN_INTERPRET(ctx);
+
+    // forth_DOTS(ctx);
+
+    return (int)res;
 }
