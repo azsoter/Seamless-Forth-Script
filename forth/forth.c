@@ -85,7 +85,7 @@ void forth_execute(forth_runtime_context_t *ctx)
     }
 
     // **TODO** Need to handle words other than primitives.
-    xt->behavior(ctx);
+    ((forth_behavior_t)xt->meaning)(ctx);
 }
 
 // ABORT ( -- )
@@ -1393,15 +1393,17 @@ void forth_help(forth_runtime_context_t *ctx)
 {
     const forth_vocabulary_entry_t *ep = forth_wl_forth;
 
-    while (0 != ep->behavior)
+    while (0 != ep->name)
     {
-        forth_TYPE0(ctx, ep->name);
+        forth_TYPE0(ctx, (char *)(ep->name));
 
-        if (0 != ep->description)
+#if !defined(FORTH_EXCLUDE_DESCRIPTIONS)
+        if (0 != ep->link)
         {
             forth_EMIT(ctx, '\t');
-            forth_TYPE0(ctx, ep->description);
+            forth_TYPE0(ctx, (char *)(ep->link));
         }
+#endif
 
         forth_cr(ctx);
         ep++;
@@ -1413,19 +1415,18 @@ void forth_words(forth_runtime_context_t *ctx)
     size_t len;
    const forth_vocabulary_entry_t *ep = forth_wl_forth;
 
-    while (0 != ep->behavior)
+    while (0 != ep->name)
     {
-        if (0 != ep->name)
-        {
-        len = strlen(ep->name);
+
+        len = strlen((char *)(ep->name));
+
         if ((ctx->terminal_width - ctx->terminal_col) <= len)
 		{
             forth_cr(ctx);
         }
-        forth_TYPE0(ctx, ep->name);
+
+        forth_TYPE0(ctx, (char *)(ep->name));
         forth_space(ctx);
-        // forth_cr(ctx);
-        }
         ep++;
     }
     forth_cr(ctx);
@@ -1443,70 +1444,67 @@ void forth_tick(forth_runtime_context_t *ctx)
 
 const forth_vocabulary_entry_t forth_wl_forth[] =
 {
-    { "quit",       0, forth_quit,          "( -- )" },
-    { "bye",        0, forth_bye,           "( -- )" },
+DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
+DEF_FORTH_WORD( "bye",        0, forth_bye,           "( -- )"),
 
-    { "(",          0, forth_paren,         " ( -- )"},
-    { ".(",         0, forth_dot_paren,     " ( -- )"},
+DEF_FORTH_WORD("(",          0, forth_paren,         " ( -- )"),
+DEF_FORTH_WORD(".(",         0, forth_dot_paren,     " ( -- )"),
 
-    { "execute",    0, forth_execute,       "( xt -- )" },
-    { "catch",      0, forth_catch,         "( xt -- code )" },
-    { "throw",      0, forth_throw,         "( code -- )" },
-    { "abort",      0, forth_abort,         "( -- )" },
-    { "depth",      0, forth_depth,         "( -- depth )"},
-    { "dup",        0, forth_dup,           "( x -- x x )"},
-    { "drop",       0, forth_drop,          "( x -- x )"},
-    { "swap",       0, forth_swap,          "( x y -- y x )"},
-    { "over",       0, forth_over,          "( x y -- x y x )" },
-    { "2dup",       0, forth_2dup,          "( x y -- x y x y )"},
-    { "2drop",      0, forth_2drop,         "( x y -- )"},
-    { "2swap",      0, forth_2swap,         "( x y a b -- a b x y )"},
-    { "2over",      0, forth_2over,         "( x y a b -- x y a b x y )" },
-    { "+",          0, forth_add,           "( x y -- x+y )"},
-    { "-",          0, forth_subtract,      "( x y -- x-y )"},
-    { "*",          0, forth_multiply,      "( x y -- x*y )"},
-    { "/",          0, forth_divide,        "( x y -- x/y )"},
-    { "mod",        0, forth_mod,           "( x y -- x%y )"},
-    { "and",        0, forth_and,           "( x y -- x&y )"},
-    { "or",         0, forth_or,            "( x y -- x|y )"},
-    { "xor",        0, forth_xor,           "( x y -- x^y )"},
+DEF_FORTH_WORD("execute",    0, forth_execute,       "( xt -- )"),
+DEF_FORTH_WORD("catch",      0, forth_catch,         "( xt -- code )"),
+DEF_FORTH_WORD("throw",      0, forth_throw,         "( code -- )"),
+DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
+DEF_FORTH_WORD("dup",        0, forth_dup,           "( x -- x x )"),
+DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- x )"),
+DEF_FORTH_WORD("swap",       0, forth_swap,          "( x y -- y x )"),
+DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),
+DEF_FORTH_WORD("2dup",       0, forth_2dup,          "( x y -- x y x y )"),
+DEF_FORTH_WORD("2drop",      0, forth_2drop,         "( x y -- )"),
+DEF_FORTH_WORD("2swap",      0, forth_2swap,         "( x y a b -- a b x y )"),
+DEF_FORTH_WORD("2over",      0, forth_2over,         "( x y a b -- x y a b x y )"),
+DEF_FORTH_WORD("+",          0, forth_add,           "( x y -- x+y )"),
+DEF_FORTH_WORD("-",          0, forth_subtract,      "( x y -- x-y )"),
+DEF_FORTH_WORD("*",          0, forth_multiply,      "( x y -- x*y )"),
+DEF_FORTH_WORD("/",          0, forth_divide,        "( x y -- x/y )"),
+DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
+DEF_FORTH_WORD("and",        0, forth_and,           "( x y -- x&y )"),
+DEF_FORTH_WORD("or",         0, forth_or,            "( x y -- x|y )"),
+DEF_FORTH_WORD("xor",        0, forth_xor,           "( x y -- x^y )"),
 
-    { "emit",       0, forth_emit,          "( char -- )" },
-    { "cr",         0, forth_cr,            "( -- )" },
-    { "type",       0, forth_type,          "( addr count -- )" },
-    { "space",      0, forth_space,         "( -- )" },
-    { "spaces",     0, forth_spaces,        "( n -- )" },
+DEF_FORTH_WORD("type",       0, forth_type,          "( addr count -- )"),
+DEF_FORTH_WORD("space",      0, forth_space,         "( -- )" ),
+DEF_FORTH_WORD("spaces",     0, forth_spaces,        "( n -- )"),
 
 
-    { ".",          0, forth_dot,           "( x -- )" },
-    { "h.",         0, forth_hdot,          "( x -- )" },
-    { "u.",         0, forth_udot,          "( x -- )" },
-    { ".s",         0, forth_dots,          "( -- )" },
-    { "dump",       0, forth_dump,          "( addr count -- )" },
+DEF_FORTH_WORD(".",          0, forth_dot,           "( x -- )"),
+DEF_FORTH_WORD("h.",         0, forth_hdot,          "( x -- )"),
+DEF_FORTH_WORD("u.",         0, forth_udot,          "( x -- )"),
+DEF_FORTH_WORD(".s",         0, forth_dots,          "( -- )"),
+DEF_FORTH_WORD("dump",       0, forth_dump,          "( addr count -- )"),
 
-    { "key?",       0, forth_key_q,         "( -- flag )" },
-    { "key",        0, forth_key,           "( -- key )" },
-    { "ekey?",      0, forth_ekey_q,        "( -- flag )" },
-    { "ekey",       0, forth_ekey,          "( -- key-event )" },
-    { "ekey>char",  0, forth_ekey2char,     "( key-event -- key-event false | char true )" },
-    { "accept",     0, forth_accept,        "( c-addr len1 -- len2 )" },
-    { "refill",     0, forth_refill,        "( -- flag )" },
+DEF_FORTH_WORD("key?",       0, forth_key_q,         "( -- flag )"),
+DEF_FORTH_WORD("key",        0, forth_key,           "( -- key )"),
+DEF_FORTH_WORD("ekey?",      0, forth_ekey_q,        "( -- flag )"),
+DEF_FORTH_WORD("ekey",       0, forth_ekey,          "( -- key-event )" ),
+DEF_FORTH_WORD("ekey>char",  0, forth_ekey2char,     "( key-event -- key-event false | char true )"),
+DEF_FORTH_WORD("accept",     0, forth_accept,        "( c-addr len1 -- len2 )"),
+DEF_FORTH_WORD("refill",     0, forth_refill,        "( -- flag )"),
 
-    { "parse",      0, forth_parse,         "( char -- c-addr len )" },
-    { "parse-name", 0, forth_parse_name,    "( \"name\" -- c-addr len )" },
-    { "find-name",  0, forth_find_name,     "( c-addr len -- xt|0)" },
-    { "'",          0, forth_tick,          "( \"name\" -- xt )" },
-    { "interpret",  0, forth_interpret,     "( -- )" },
-    { ".error",     0, forth_print_error,   "( error_code -- )"},
+DEF_FORTH_WORD("parse",      0, forth_parse,         "( char -- c-addr len )"),
+DEF_FORTH_WORD("parse-name", 0, forth_parse_name,    "( \"name\" -- c-addr len )"),
+DEF_FORTH_WORD("find-name",  0, forth_find_name,     "( c-addr len -- xt|0)"),
+DEF_FORTH_WORD("'",          0, forth_tick,          "( \"name\" -- xt )"),
+DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
+DEF_FORTH_WORD(".error",     0, forth_print_error,   "( error_code -- )"),
 
 
-    { "words",      0, forth_words,          "( -- )" },
-    { "help",       0, forth_help,          "( -- )" },
+DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
+DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
 
-    { 0, 0, 0}
+DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
-const forth_vocabulary_entry_t forth_interpret_xt =     { "INTERPRET",  0, forth_interpret,      "( -- )" };
+const forth_vocabulary_entry_t forth_interpret_xt =     DEF_FORTH_WORD("INTERPRET",  0, forth_interpret,      "( -- )" );
 
 // Interpret the text in CMD.
 // The command is passed as address and length (so we can interpret substrings inside some bigger buffer).

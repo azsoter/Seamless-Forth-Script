@@ -35,11 +35,17 @@
 
 struct forth_vocabulary_entry_struct
 {
-    char *name;
+    forth_cell_t name;
 	forth_ucell_t flags;
-    forth_behavior behavior;
-    char *description;
+	forth_cell_t link;
+    forth_ucell_t meaning;
 };
+
+#if defined(FORTH_EXCLUDE_DESCRIPTIONS)
+#define DEF_FORTH_WORD(N, F, M, D)	{ (forth_cell_t)N, F, (forth_ucell_t)0, (forth_ucell_t)M }
+#else
+#define DEF_FORTH_WORD(N, F, M, D)	{ (forth_cell_t)N, F, (forth_ucell_t)D, (forth_ucell_t)M }
+#endif
 
 struct forth_runtime_context
 {

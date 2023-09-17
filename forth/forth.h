@@ -38,7 +38,7 @@
 
 typedef struct forth_runtime_context forth_runtime_context_t;
 
-typedef void (*forth_behavior)(forth_runtime_context_t *ctx);
+typedef void (*forth_behavior_t)(forth_runtime_context_t *ctx);
 
 typedef struct forth_vocabulary_entry_struct forth_vocabulary_entry_t;
 typedef forth_vocabulary_entry_t *forth_xt_t;

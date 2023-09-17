@@ -40,4 +40,6 @@
 #define FORTH_TIB_SIZE 256
 #define FORTH_ALLOW_0X_HEX 1
 
+// #define FORTH_EXCLUDE_DESCRIPTIONS 1
+
 #endif

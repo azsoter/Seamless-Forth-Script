@@ -55,7 +55,7 @@ const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t
 
     while (0 != p->name)
     {
-        if (forth_compare_names(p->name, name, name_length))
+        if (forth_compare_names((char *)(p->name), name, name_length))
         {
             return p;
         }
