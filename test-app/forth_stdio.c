@@ -108,6 +108,7 @@ static forth_cell_t ekey_to_char(struct forth_runtime_context *rctx, forth_cell_
 
 #define SEARCH_ORDER_SIZE 32 /* Perhaps move this to some header file at one point. */
 
+forth_dictionary_t *dict = 0;
 
 int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, const char *cmd)
 {
@@ -117,6 +118,11 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 	forth_cell_t *rp;
 	forth_cell_t *search_order;
 	forth_cell_t size = sizeof(struct forth_runtime_context) + sizeof(forth_cell_t) * (dstack_cells + rstack_cells + (SEARCH_ORDER_SIZE));
+
+	if (0 == dict)
+	{
+		dict = forth_INIT_DICTIONARY(dictionary, sizeof(dictionary));
+	}
 
     char *ctx = alloca(size);
     if (0 == ctx)
@@ -185,6 +191,9 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 	rctx->extra.selector = FORTH_FEATURE_SELECTOR_TELNET;
 	rctx->extra.caller_context = 0;
 #endif
+
+	rctx->dictionary = dict;
+
     res = forth(rctx, cmd, strlen(cmd), 1);
 
 //   	free(ctx);

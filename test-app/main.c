@@ -30,6 +30,8 @@
 #include <forth.h>
 #include "app.h"
 
+forth_cell_t dictionary[DICTIONARY_SIZE];
+
 int main()
 {
     int res;

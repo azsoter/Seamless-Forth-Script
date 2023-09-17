@@ -28,6 +28,10 @@
 *
 */
 
+#define DICTIONARY_SIZE 256 /* cells */
+
+extern forth_cell_t dictionary[DICTIONARY_SIZE];
+
 extern int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, const char *cmd);
 
 #endif

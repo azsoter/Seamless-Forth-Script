@@ -47,9 +47,20 @@ struct forth_vocabulary_entry_struct
 #define DEF_FORTH_WORD(N, F, M, D)	{ (forth_cell_t)N, F, (forth_ucell_t)D, (forth_ucell_t)M }
 #endif
 
+struct forth_dictionary
+{
+	forth_ucell_t	dp;			// An index to items.
+	forth_ucell_t	dp_max;		// Max value of dp.
+	forth_ucell_t	latest;		// The location of the last defined word header, index to items.
+	uint8_t 		items[1];	// Place holder for the rest of the dictionary.
+};
+
+typedef struct forth_dictionary forth_dictionary_t;
+
 struct forth_runtime_context
 {
-	forth_cell_t	*dictionary;
+	//forth_cell_t	*dictionary;
+	forth_dictionary_t *dictionary;
 	forth_cell_t	*sp_max;
 	forth_cell_t	*sp_min;
 	forth_cell_t	*sp0;
@@ -112,6 +123,7 @@ extern const forth_vocabulary_entry_t forth_wl_forth[];
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_vocabulary_entry_t forth_interpret_xt;
 
+extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx);
 extern void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code);
@@ -123,6 +135,7 @@ extern void forth_PUSH(forth_runtime_context_t *ctx, forth_ucell_t x);
 extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
 extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
 extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
+extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
 
 // Primitives
 extern void forth_execute(forth_runtime_context_t *ctx);
@@ -181,6 +194,21 @@ extern void forth_tick(forth_runtime_context_t *ctx);
 extern void forth_words(forth_runtime_context_t *ctx);
 extern void forth_help(forth_runtime_context_t *ctx);
 extern void forth_quit(forth_runtime_context_t *ctx);
+
+extern void forth_noop(forth_runtime_context_t *ctx);
+extern void forth_decimal(forth_runtime_context_t *ctx);
+extern void forth_hex(forth_runtime_context_t *ctx);
+extern void forth_base(forth_runtime_context_t *ctx);
+extern void forth_state(forth_runtime_context_t *ctx);
+
+extern void forth_here(forth_runtime_context_t *ctx);
+extern void forth_unused(forth_runtime_context_t *ctx);
+extern void forth_align(forth_runtime_context_t *ctx);
+extern void forth_aligned(forth_runtime_context_t *ctx);
+extern void forth_allot(forth_runtime_context_t *ctx);
+extern void forth_c_comma(forth_runtime_context_t *ctx); // C,
+extern void forth_comma(forth_runtime_context_t *ctx);	 // ,
+
 extern void forth_bye(forth_runtime_context_t *ctx);
 
 #endif

@@ -68,6 +68,7 @@ typedef forth_ucell_t forth_cell_t;
 
 // Works if sizeof(forth_cell_t) is a power of 2.
 #define FORTH_ALIGN(X) ((((forth_ucell_t)(X)) + (sizeof(forth_ucell_t) - 1)) & ~(sizeof(forth_ucell_t) - 1))
+#define FORTH_ALIGNED_MASK (~(sizeof(forth_ucell_t) - 1))
 
 #define FORTH_NUM_BUFF_LENGTH (128 + 4)
 

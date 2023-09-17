@@ -1388,6 +1388,186 @@ void forth_quit(forth_runtime_context_t *ctx)
     forth_bye(ctx);
 }
 // ---------------------------------------------------------------------------------------------------------------
+// NOOP ( -- )
+void forth_noop(forth_runtime_context_t *ctx)
+{
+
+}
+
+// DECIMAL ( -- )
+void forth_decimal(forth_runtime_context_t *ctx)
+{
+	ctx->base = 10;
+}
+
+// HEX ( -- )
+void forth_hex(forth_runtime_context_t *ctx)
+{
+	ctx->base = 16;
+}
+
+// BASE ( -- addr )
+void forth_base(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t) &(ctx->base));
+}
+
+// STATE ( -- addr )
+void forth_state(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t) &(ctx->state));
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+//                                                  Live Compiler
+// ---------------------------------------------------------------------------------------------------------------
+forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length)
+{
+	forth_dictionary_t *dict;
+
+	if ((0 == addr) || (length < sizeof(forth_dictionary_t)))
+	{
+		return (forth_dictionary_t *)0;
+	}
+
+	memset(addr, 0, length);
+
+	dict = (forth_dictionary_t *)addr;
+	dict->dp = 0;
+	length -= FORTH_ALIGN(sizeof(forth_dictionary_t));
+	dict->dp_max = length;
+}
+
+// HERE ( -- addr )
+void forth_here(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	forth_PUSH(ctx, (forth_cell_t)&(ctx->dictionary->items[ctx->dictionary->dp]));
+}
+
+// UNUSED ( -- u )
+void forth_unused(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	forth_PUSH(ctx, ctx->dictionary->dp_max - ctx->dictionary->dp);
+}
+
+// ALLOT ( n -- )
+void forth_allot(forth_runtime_context_t *ctx)
+{
+	forth_cell_t n = forth_POP(ctx);
+	forth_cell_t dp;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	dp = n + ctx->dictionary->dp;
+
+	if (dp > ctx->dictionary->dp_max)
+	{
+		forth_THROW(ctx, -8); // Dictionary overflow.
+	}
+
+	ctx->dictionary->dp = dp;
+}
+
+// ALIGN ( -- )
+void forth_align(forth_runtime_context_t *ctx)
+{
+	forth_cell_t dp;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	dp = ctx->dictionary->dp;
+	dp = FORTH_ALIGN(dp);
+
+	if (dp > ctx->dictionary->dp_max)
+	{
+		forth_THROW(ctx, -8); // Dictionary overflow.
+	}
+
+	ctx->dictionary->dp = dp;
+}
+
+// ALIGNED ( addr -- a-addr )
+void forth_aligned(forth_runtime_context_t *ctx)
+{
+	forth_cell_t addr = forth_POP(ctx);
+	addr = FORTH_ALIGN(addr);
+	forth_PUSH(ctx, addr);
+}
+
+// C, ( c -- )
+void forth_c_comma(forth_runtime_context_t *ctx)
+{
+	forth_cell_t chr = forth_POP(ctx);
+	forth_cell_t dp;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	dp = ctx->dictionary->dp;
+	ctx->dictionary->items[dp++] = (uint8_t)chr;
+
+	if (dp > ctx->dictionary->dp_max)
+	{
+		forth_THROW(ctx, -8); // Dictionary overflow.
+	}
+
+	ctx->dictionary->dp = dp;
+}
+
+
+void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x)
+{
+	forth_cell_t ix;
+	forth_cell_t dp;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	ix = ctx->dictionary->dp;
+
+	if (ix != (ix & FORTH_ALIGNED_MASK))
+	{
+		forth_THROW(ctx, -23);	// Address alignment exception.
+	}
+
+	*(forth_cell_t *)&(ctx->dictionary->items[ix]) = x;
+	dp = ix + sizeof(forth_cell_t);
+
+	if (dp > ctx->dictionary->dp_max)
+	{
+		forth_THROW(ctx, -8); // Dictionary overflow.
+	}
+
+	ctx->dictionary->dp = dp;
+}
+
+// , ( u -- )
+void forth_comma(forth_runtime_context_t *ctx)
+{
+	forth_cell_t x = forth_POP(ctx);
+	forth_COMMA(ctx, x);
+}
+// ---------------------------------------------------------------------------------------------------------------
 // HELP ( -- )
 void forth_help(forth_runtime_context_t *ctx)
 {
@@ -1496,7 +1676,20 @@ DEF_FORTH_WORD("find-name",  0, forth_find_name,     "( c-addr len -- xt|0)"),
 DEF_FORTH_WORD("'",          0, forth_tick,          "( \"name\" -- xt )"),
 DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
 DEF_FORTH_WORD(".error",     0, forth_print_error,   "( error_code -- )"),
+DEF_FORTH_WORD("noop",       0, forth_noop,          "( -- )"),
+DEF_FORTH_WORD("decimal",    0, forth_decimal,       "( -- )"),
+DEF_FORTH_WORD("hex",    	 0, forth_hex,       	 "( -- )"),
+DEF_FORTH_WORD("base",       0, forth_base,          "( -- addr )"),
 
+DEF_FORTH_WORD("state",      0, forth_state,         "( -- addr )"),
+DEF_FORTH_WORD("here",       0, forth_here,          "( -- addr )"),
+DEF_FORTH_WORD("unused",     0, forth_unused,        "( -- u )"),
+DEF_FORTH_WORD("aligned",    0, forth_aligned,       "( addr -- a-addr )"),
+DEF_FORTH_WORD("align",      0, forth_align,         "( --  )"),
+DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
+DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
+DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
+DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
 
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
