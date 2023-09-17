@@ -74,11 +74,8 @@ forth_cell_t forth_POP(forth_runtime_context_t *ctx)
     return x;
 }
 
-// EXECUTE ( xt -- )
-void forth_execute(forth_runtime_context_t *ctx)
-{
-    forth_xt_t xt = (forth_xt_t)forth_POP(ctx);
- 
+void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt)
+{ 
     if (0 == xt)
     {
         forth_THROW(ctx, -13); // Is there a better value to throw here???????
@@ -86,6 +83,13 @@ void forth_execute(forth_runtime_context_t *ctx)
 
     // **TODO** Need to handle words other than primitives.
     ((forth_behavior_t)xt->meaning)(ctx);
+}
+
+// EXECUTE ( xt -- )
+void forth_execute(forth_runtime_context_t *ctx)
+{
+    forth_xt_t xt = (forth_xt_t)forth_POP(ctx);
+	forth_EXECUTE(ctx, xt);
 }
 
 // ABORT ( -- )
@@ -1566,6 +1570,38 @@ void forth_comma(forth_runtime_context_t *ctx)
 {
 	forth_cell_t x = forth_POP(ctx);
 	forth_COMMA(ctx, x);
+}
+
+forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx, const char *name, forth_cell_t name_length)
+{
+	forth_cell_t len = name_length + 1;
+	forth_vocabulary_entry_t *res;
+	uint8_t *here;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	if ((sizeof(forth_vocabulary_entry_t) + len) > (ctx->dictionary->dp_max - ctx->dictionary->dp))
+	{
+		forth_THROW(ctx, -8); // Dictionary overflow.
+	}
+
+	forth_here(ctx);
+	here = (uint8_t *)forth_POP(ctx);
+	forth_PUSH(ctx, len);
+	forth_allot(ctx);
+	memmove(here, name, name_length);
+	here[name_length] = 0;
+	forth_align(ctx);
+	forth_here(ctx);
+	res = (forth_vocabulary_entry_t *)forth_POP(ctx);
+	forth_COMMA(ctx, (forth_cell_t)here);				// name
+	forth_COMMA(ctx, 0);								// flags
+	forth_COMMA(ctx, ctx->dictionary->latest);			// link
+	forth_COMMA(ctx, (forth_cell_t)forth_noop);			// place holder for meaning
+	return res;
 }
 // ---------------------------------------------------------------------------------------------------------------
 // HELP ( -- )

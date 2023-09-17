@@ -124,9 +124,11 @@ extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_vocabulary_entry_t forth_interpret_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
+extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx);
 extern void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code);
+extern forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx, const char *name, forth_cell_t name_length);
 
 extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length);
 
