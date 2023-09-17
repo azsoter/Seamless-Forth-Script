@@ -32,8 +32,9 @@
 
 int main()
 {
+    int res;
     puts("Hello World!");
-    //forth(0,"help");
-    forth_run_forth_stdio(128, 128, "quit");
+    res = forth_run_forth_stdio(128, 128, "quit");
+    printf("result = %d\r\n", res);
     return 0;
 }

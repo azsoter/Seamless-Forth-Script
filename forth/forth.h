@@ -36,15 +36,13 @@
 #define FORTH_CHAR_SPACE 0x20
 
 
-typedef struct forth_word_header_struct forth_word_header;
-
-
-
 typedef struct forth_runtime_context forth_runtime_context_t;
 
 typedef void (*forth_behavior)(forth_runtime_context_t *ctx);
 
 typedef struct forth_vocabulary_entry_struct forth_vocabulary_entry_t;
+typedef forth_vocabulary_entry_t *forth_xt_t;
+
 typedef struct forth_runtime_context forth_runtime_context_t;
 
 //extern int forth_execute_xt(forth_runtime_context_t *ctx, forth_xt_t xt);

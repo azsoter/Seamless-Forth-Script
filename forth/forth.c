@@ -78,16 +78,14 @@ forth_cell_t forth_POP(forth_runtime_context_t *ctx)
 void forth_execute(forth_runtime_context_t *ctx)
 {
     forth_xt_t xt = (forth_xt_t)forth_POP(ctx);
-    forth_vocabulary_entry_t *entry;
-
+ 
     if (0 == xt)
     {
-            forth_THROW(ctx, -13); // Is there a better value to throw here???????
+        forth_THROW(ctx, -13); // Is there a better value to throw here???????
     }
 
-    entry = (forth_vocabulary_entry_t *)xt;
     // **TODO** Need to handle words other than primitives.
-    entry->behavior(ctx);
+    xt->behavior(ctx);
 }
 
 // ABORT ( -- )
@@ -128,6 +126,31 @@ void forth_catch(forth_runtime_context_t *ctx)
     }
 
     ctx->throw_handler = saved_handler;
+}
+
+// This function is an interface to make it easier to call catch from C.
+// It takes the execution token as a parameter and returns the code from catch.
+forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+    forth_scell_t res;
+
+    if ((ctx->sp - 1) < ctx->sp_min)
+    {
+        return -3;
+    }
+
+    if (ctx->sp > ctx->sp_max)
+    {
+        return -4;
+    }
+
+    *--(ctx->sp) = (forth_cell_t)xt;
+
+    forth_catch(ctx);
+
+    res = *(ctx->sp++);
+
+    return res;
 }
 
 // DEPTH ( -- depth )
@@ -259,6 +282,10 @@ void forth_divide(forth_runtime_context_t *ctx)
 {
     forth_scell_t y = (forth_scell_t)forth_POP(ctx);
     forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+    if (0 == y)
+    {
+        forth_THROW(ctx, -10);
+    }
     forth_PUSH(ctx, (forth_cell_t)(x/y));
 }
 
@@ -267,6 +294,10 @@ void forth_mod(forth_runtime_context_t *ctx)
 {
     forth_scell_t y = (forth_scell_t)forth_POP(ctx);
     forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+    if (0 == y)
+    {
+        forth_THROW(ctx, -10);
+    }
     forth_PUSH(ctx, (forth_cell_t)(x%y));
 }
 
@@ -662,7 +693,7 @@ static int forth_DOT_R(struct forth_runtime_context *ctx, forth_cell_t base, for
 	return ctx->write_string(ctx, p, nlen);
 }
 
-static int forth_DOTS(struct forth_runtime_context *ctx)
+int forth_DOTS(forth_runtime_context_t *ctx)
 {
 	char buff[20];
 	char *p;
@@ -1478,6 +1509,8 @@ const forth_vocabulary_entry_t forth_wl_forth[] =
 
 const forth_vocabulary_entry_t forth_interpret_xt =     { "INTERPRET",  0, forth_interpret,      "( -- )" };
 
+// Interpret the text in CMD.
+// Returns 0 on success and a non-zero value (which is a code from CATCH/THROW) if an error has occured.
 int forth(forth_runtime_context_t *ctx, const char *cmd)
 {
     forth_cell_t res;
@@ -1505,6 +1538,7 @@ int forth(forth_runtime_context_t *ctx, const char *cmd)
     forth_PUSH(ctx, 0x8765432112345678);
     // ---------------------------------------------
 #endif
+    //cmd = " 1 2 3 4 xxx";
     ctx->to_in = 0;
     ctx->source_address = cmd;
     ctx->source_length = strlen(cmd);
@@ -1512,10 +1546,15 @@ int forth(forth_runtime_context_t *ctx, const char *cmd)
 	ctx->blk = 0;
 
     // res = forth_RUN_INTERPRET(ctx);
-    // This PUSH discards 'const' from the pointer but options are limited, see FIND-NAME for details.
+    // This discards 'const' from the pointer but options are limited, see FIND-NAME for details.
+#if 0
     forth_PUSH(ctx, (forth_cell_t)(&forth_interpret_xt));   // ' INTERPRET
     forth_catch(ctx);                                       // CATCH
     res = *(ctx->sp);
+#else
+    res = forth_CATCH(ctx, (forth_xt_t)&forth_interpret_xt);
+#endif
+    forth_DOTS(ctx);
     forth_PRINT_ERROR(ctx, res);                            // .ERROR
-    return (0 == res) ? 0 : -1;
+    return res;
 }

@@ -111,6 +111,7 @@ static forth_cell_t ekey_to_char(struct forth_runtime_context *rctx, forth_cell_
 
 int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, const char *cmd)
 {
+	int res;
 	struct forth_runtime_context *rctx;
 	forth_cell_t *sp;
 	forth_cell_t *rp;
@@ -184,9 +185,9 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 	rctx->extra.selector = FORTH_FEATURE_SELECTOR_TELNET;
 	rctx->extra.caller_context = 0;
 #endif
-    forth(rctx, cmd);
+    res = forth(rctx, cmd);
 
 //   	free(ctx);
-    return 0;
+    return res;
 }
 // ------------------------------------------------------------------------------------------------

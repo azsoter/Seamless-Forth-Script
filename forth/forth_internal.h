@@ -33,13 +33,6 @@
 #include <forth.h>
 #include <setjmp.h>
 
-/*
-struct forth_word_header_struct
-{
-
-};
-*/
-
 struct forth_vocabulary_entry_struct
 {
     char *name;
@@ -112,6 +105,8 @@ struct forth_runtime_context
 extern const forth_vocabulary_entry_t forth_wl_forth[];
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_vocabulary_entry_t forth_interpret_xt;
+
+extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length);
 
 extern void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code);

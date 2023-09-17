@@ -65,7 +65,6 @@ typedef int64_t  forth_sdcell_t;
 
 typedef uint8_t	forth_byte_t;
 typedef forth_ucell_t forth_cell_t;
-typedef forth_cell_t forth_xt_t;
 
 // Works if sizeof(forth_cell_t) is a power of 2.
 #define FORTH_ALIGN(X) ((((forth_ucell_t)(X)) + (sizeof(forth_ucell_t) - 1)) & ~(sizeof(forth_ucell_t) - 1))
