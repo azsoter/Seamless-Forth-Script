@@ -223,6 +223,23 @@ void forth_over(forth_runtime_context_t *ctx)
 
     forth_PUSH(ctx, ctx->sp[1]);
 }
+
+// @ ( addr - val )
+void forth_fetch(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *p = (forth_cell_t *)forth_POP(ctx);
+	forth_cell_t  c = *p;
+	forth_PUSH(ctx, c);
+}
+
+// ! ( val addr - )
+void forth_store(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *p = (forth_cell_t *)forth_POP(ctx);
+	forth_cell_t  c = forth_POP(ctx);
+	*p = c;
+}
+
 // ------------------------------------------------
 // 2DROP ( x y -- )
 void forth_2drop(forth_runtime_context_t *ctx)
@@ -1620,9 +1637,11 @@ void forth_comma(forth_runtime_context_t *ctx)
 	forth_COMMA(ctx, x);
 }
 
-forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx, const char *name, forth_cell_t name_length)
+forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx)
 {
-	forth_cell_t len = name_length + 1;
+	const char *name;
+	forth_cell_t name_length;
+	forth_cell_t len;
 	forth_vocabulary_entry_t *res;
 	uint8_t *here;
 
@@ -1630,6 +1649,10 @@ forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t 
 	{
 		forth_THROW(ctx, -21); // Unsupported opration.
 	}
+
+	name_length = forth_POP(ctx);
+	name = (const char *)forth_POP(ctx);
+	len = name_length + 1;
 
 	if ((sizeof(forth_vocabulary_entry_t) + len) > (ctx->dictionary->dp_max - ctx->dictionary->dp))
 	{
@@ -1648,8 +1671,22 @@ forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t 
 	forth_COMMA(ctx, (forth_cell_t)here);				// name
 	forth_COMMA(ctx, 0);								// flags
 	forth_COMMA(ctx, ctx->dictionary->latest);			// link
-	forth_COMMA(ctx, (forth_cell_t)forth_noop);			// place holder for meaning
+	forth_COMMA(ctx, 0);			// place holder for meaning
 	return res;
+}
+
+void forth_variable(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+	//const char *name;
+	//forth_cell_t len;
+	forth_parse_name(ctx);
+	//len = forth_POP(ctx);
+	//name = (const char *)forth_POP(ctx);
+	entry = forth_CREATE_DICTIONARY_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_VARIABLE;
+	entry->link = ctx->dictionary->latest;
+	ctx->dictionary->latest = (forth_cell_t)entry;
 }
 // ---------------------------------------------------------------------------------------------------------------
 // HELP ( -- )
@@ -1677,8 +1714,25 @@ void forth_help(forth_runtime_context_t *ctx)
 void forth_words(forth_runtime_context_t *ctx)
 {
     size_t len;
-   const forth_vocabulary_entry_t *ep = forth_wl_forth;
+   const forth_vocabulary_entry_t *ep;
 
+	if (0 != ctx->dictionary)
+	{
+		ep = (forth_vocabulary_entry_t *)(ctx->dictionary->latest);
+		while (0 != ep)
+		{
+			if ((ctx->terminal_width - ctx->terminal_col) <= len)
+			{
+            	forth_cr(ctx);
+        	}
+
+        	forth_TYPE0(ctx, (char *)(ep->name));
+        	forth_space(ctx);
+			ep = (forth_vocabulary_entry_t *)(ep->link);
+		}
+	}
+
+	ep = forth_wl_forth;
     while (0 != ep->name)
     {
 
@@ -1693,6 +1747,7 @@ void forth_words(forth_runtime_context_t *ctx)
         forth_space(ctx);
         ep++;
     }
+
     forth_cr(ctx);
 }
 
@@ -1722,6 +1777,8 @@ DEF_FORTH_WORD("dup",        0, forth_dup,           "( x -- x x )"),
 DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- x )"),
 DEF_FORTH_WORD("swap",       0, forth_swap,          "( x y -- y x )"),
 DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),
+DEF_FORTH_WORD("@",          0, forth_fetch,          "( addr -- val )"),
+DEF_FORTH_WORD("!",          0, forth_store,          "( val addr -- )"),
 DEF_FORTH_WORD("2dup",       0, forth_2dup,          "( x y -- x y x y )"),
 DEF_FORTH_WORD("2drop",      0, forth_2drop,         "( x y -- )"),
 DEF_FORTH_WORD("2swap",      0, forth_2swap,         "( x y a b -- a b x y )"),
@@ -1775,6 +1832,7 @@ DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
 DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
 DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
+DEF_FORTH_WORD("variable",   0, forth_variable,       "( \"name\" --)"),
 DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
 DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
 DEF_FORTH_WORD("true", FORTH_XT_FLAGS_ACTION_CONSTANT, ~0, 0),

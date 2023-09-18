@@ -65,6 +65,32 @@ const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t
     return 0;
 }
 
+forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary, const char *name, int name_length)
+{
+    forth_vocabulary_entry_t *p;
+
+    if (0 == dictionary)
+    {
+        return 0;
+    }
+   
+	p = (forth_vocabulary_entry_t *)(dictionary->latest);
+    
+	while (0 != p)
+	{
+        if (0 != p->name)
+        {
+            if (forth_compare_names((char *)(p->name), name, name_length))
+            {
+                return p;
+            }  
+        }
+        p = (forth_vocabulary_entry_t *)(p->link);
+    }
+
+    return p;
+}
+
 const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
     forth_wl_forth,
     0
@@ -79,15 +105,19 @@ void forth_find_name(struct forth_runtime_context *ctx)
     forth_cell_t len = forth_POP(ctx);
     forth_cell_t addr = forth_POP(ctx);
 
-    //ep = forth_SEARCH_LIST(forth_wl_forth, (char *)addr, (int)len);
-    while (0 != *wl)
+    ep = forth_SEARCH_DICTIONARY(ctx->dictionary, (const char *)addr, len);
+
+    if (0 == ep)
     {
-       ep = forth_SEARCH_LIST(*wl, (char *)addr, (int)len);
-       if (0 != ep)
-       {
-        break;
-       }
-       wl++;
+        while (0 != *wl)
+        {
+            ep = forth_SEARCH_LIST(*wl, (char *)addr, (int)len);
+            if (0 != ep)
+            {
+                break;
+            }
+            wl++;
+        }
     }
 
     // Pushing the address like this overrides (discards) the const qualifier from the poiter.

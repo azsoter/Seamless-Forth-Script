@@ -135,7 +135,7 @@ extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx);
 extern void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code);
-extern forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx, const char *name, forth_cell_t name_length);
+extern forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx);
 
 extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length);
 
@@ -187,6 +187,8 @@ extern void forth_dup(forth_runtime_context_t *ctx);
 extern void forth_drop(forth_runtime_context_t *ctx);
 extern void forth_swap(forth_runtime_context_t *ctx);
 extern void forth_over(forth_runtime_context_t *ctx);
+extern void forth_fetch(forth_runtime_context_t *ctx); // @
+extern void forth_store(forth_runtime_context_t *ctx); // !
 extern void forth_2drop(forth_runtime_context_t *ctx);
 extern void forth_2swap(forth_runtime_context_t *ctx);
 extern void forth_2dup(forth_runtime_context_t *ctx);
@@ -221,6 +223,7 @@ extern void forth_aligned(forth_runtime_context_t *ctx);
 extern void forth_allot(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); // C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 // ,
+extern void forth_variable(forth_runtime_context_t *ctx);
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 
