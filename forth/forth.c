@@ -75,14 +75,35 @@ forth_cell_t forth_POP(forth_runtime_context_t *ctx)
 }
 
 void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt)
-{ 
+{
     if (0 == xt)
     {
         forth_THROW(ctx, -13); // Is there a better value to throw here???????
     }
 
-    // **TODO** Need to handle words other than primitives.
-    ((forth_behavior_t)xt->meaning)(ctx);
+    switch((uint8_t)(xt->flags & FORTH_XT_FLAGS_ACTION_MASK))
+	{
+		case FORTH_XT_FLAGS_ACTION_PRIMITIVE:
+		    ((forth_behavior_t)xt->meaning)(ctx);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_THREADED:
+			forth_InnerInterpreter(ctx, xt);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_VARIABLE:
+			forth_DoVar(ctx, xt);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_CONSTANT:
+			forth_DoConst(ctx, xt);
+			break;
+
+		default:
+			forth_THROW(ctx, -21);
+			break;
+	}
+
 }
 
 // EXECUTE ( xt -- )
@@ -112,6 +133,7 @@ void forth_catch(forth_runtime_context_t *ctx)
     forth_ucell_t *saved_sp = ctx->sp;
     forth_ucell_t *saved_rp = ctx->rp;
     forth_ucell_t saved_handler = ctx->throw_handler;
+	forth_xt_t *saved_ip = ctx->ip;
     jmp_buf catch_frame;
 
     res = setjmp(catch_frame);
@@ -124,6 +146,7 @@ void forth_catch(forth_runtime_context_t *ctx)
     }
     else
     {
+		ctx->ip = saved_ip;
         ctx->sp = saved_sp;
         ctx->rp = saved_rp;
         *(ctx->sp) = res;
@@ -1423,7 +1446,7 @@ void forth_state(forth_runtime_context_t *ctx)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-//                                                  Live Compiler
+//                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
 forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length)
 {
@@ -1440,6 +1463,31 @@ forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length)
 	dict->dp = 0;
 	length -= FORTH_ALIGN(sizeof(forth_dictionary_t));
 	dict->dp_max = length;
+}
+
+// Interpreter for threaded code.
+void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_xt_t *saved_ip = ctx->ip;
+
+	ctx->ip = (forth_xt_t *) &(xt->meaning);
+
+	while (0 != *(ctx->ip))
+	{
+		forth_EXECUTE(ctx, *(ctx->ip++));
+	}
+}
+
+// Details of how constants are implemented.
+void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_PUSH(ctx, xt->meaning);
+}
+
+// Details of how variables are implemented.
+void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_PUSH(ctx, (forth_cell_t) &(xt->meaning));
 }
 
 // HERE ( -- addr )
@@ -1690,7 +1738,8 @@ DEF_FORTH_WORD("xor",        0, forth_xor,           "( x y -- x^y )"),
 DEF_FORTH_WORD("type",       0, forth_type,          "( addr count -- )"),
 DEF_FORTH_WORD("space",      0, forth_space,         "( -- )" ),
 DEF_FORTH_WORD("spaces",     0, forth_spaces,        "( n -- )"),
-
+DEF_FORTH_WORD("emit",       0, forth_emit,          "( char -- )"),
+DEF_FORTH_WORD("cr",         0, forth_cr,            "( -- )"),
 
 DEF_FORTH_WORD(".",          0, forth_dot,           "( x -- )"),
 DEF_FORTH_WORD("h.",         0, forth_hdot,          "( x -- )"),
@@ -1726,7 +1775,11 @@ DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
 DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
 DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
-
+DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
+DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
+DEF_FORTH_WORD("true", FORTH_XT_FLAGS_ACTION_CONSTANT, ~0, 0),
+DEF_FORTH_WORD("false", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, 0),
+DEF_FORTH_WORD("bl", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_CHAR_SPACE, "( -- space )"),
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
 
@@ -1766,6 +1819,7 @@ int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length
 
     ctx->bye_handler = (forth_ucell_t)(&frame);
 
+	ctx->ip = 0;
     ctx->rp = ctx->rp0;
 
     if (clear_stack)

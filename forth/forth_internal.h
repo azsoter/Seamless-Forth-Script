@@ -47,6 +47,14 @@ struct forth_vocabulary_entry_struct
 #define DEF_FORTH_WORD(N, F, M, D)	{ (forth_cell_t)N, F, (forth_ucell_t)D, (forth_ucell_t)M }
 #endif
 
+#define FORTH_XT_FLAGS_IMMEDIATE 		0x80
+#define FORTH_XT_FLAGS_ACTION_MASK		0x07
+#define FORTH_XT_FLAGS_ACTION_PRIMITIVE	0x00
+#define FORTH_XT_FLAGS_ACTION_CONSTANT	0x01
+#define FORTH_XT_FLAGS_ACTION_VARIABLE	0x02
+#define FORTH_XT_FLAGS_ACTION_DEFER		0x03
+#define	FORTH_XT_FLAGS_ACTION_THREADED	0x04
+
 struct forth_dictionary
 {
 	forth_ucell_t	dp;			// An index to items.
@@ -59,7 +67,6 @@ typedef struct forth_dictionary forth_dictionary_t;
 
 struct forth_runtime_context
 {
-	//forth_cell_t	*dictionary;
 	forth_dictionary_t *dictionary;
 	forth_cell_t	*sp_max;
 	forth_cell_t	*sp_min;
@@ -69,7 +76,7 @@ struct forth_runtime_context
 	forth_cell_t	*rp_min;
 	forth_cell_t	*rp0;
 	forth_cell_t	*rp;
-//	forth_index_t	ip;
+	forth_xt_t		*ip;
 	forth_cell_t	base;	// Numeric base.
 	forth_cell_t	state;
 	forth_cell_t	throw_handler;
@@ -138,6 +145,10 @@ extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
 extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
 extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
 extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
+
+extern void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt);
+extern void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt);
+extern void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt);
 
 // Primitives
 extern void forth_execute(forth_runtime_context_t *ctx);
