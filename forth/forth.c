@@ -52,7 +52,7 @@ void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code)
 }
 
 // Check if the stack contains at least n items.
-void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, int n)
+void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, forth_cell_t n)
 {
 	if ((ctx->sp + n) > ctx->sp_max)
     {
@@ -205,6 +205,95 @@ void forth_dup(forth_runtime_context_t *ctx)
 void forth_drop(forth_runtime_context_t *ctx)
 {
     (void)forth_POP(ctx);
+}
+
+// NIP ( x y -- y )
+void forth_nip(forth_runtime_context_t *ctx)
+{
+	forth_cell_t c = forth_POP(ctx);
+    (void)forth_POP(ctx);
+	forth_PUSH(ctx, c);
+}
+
+// TUCK ( x y -- y x y )
+void forth_tuck(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, y);
+	forth_PUSH(ctx, x);
+	forth_PUSH(ctx, y);
+}
+
+
+// -ROT ( x y z -- z x y )
+void forth_mrot(forth_runtime_context_t *ctx)
+{
+	forth_cell_t z = forth_POP(ctx);
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, z);
+	forth_PUSH(ctx, x);
+	forth_PUSH(ctx, y);
+}
+
+// ROT ( x y z -- y z x )
+void forth_rot(forth_runtime_context_t *ctx)
+{
+	forth_cell_t z = forth_POP(ctx);
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, y);
+	forth_PUSH(ctx, z);
+	forth_PUSH(ctx, x);
+}
+
+// PICK ( xu..x1 x0 u --  xu..x1 x0 xu)
+void forth_pick(forth_runtime_context_t *ctx)
+{
+	forth_cell_t ix = forth_POP(ctx);
+	forth_CHECK_STACK_AT_LEAST(ctx, (int)ix); // **TODO** This may not be OK!!!!
+	forth_PUSH(ctx, ctx->sp[ix]);
+}
+
+// CS-PICK ( C: destu ... orig0 | dest0 -- destu ... orig0 | dest0 destu ) ( S: u -- )
+void forth_cspick(forth_runtime_context_t *ctx)
+{
+	forth_cell_t ix = forth_POP(ctx);
+	forth_CHECK_STACK_AT_LEAST(ctx, (2*ix + 2));
+	forth_PUSH(ctx, ctx->sp[2*ix + 1]);
+	forth_PUSH(ctx, ctx->sp[2*ix + 1]);
+}
+
+// ROLL ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
+void forth_roll(forth_runtime_context_t *ctx)
+{
+	forth_cell_t i = forth_POP(ctx);
+	forth_cell_t tos;
+
+	forth_CHECK_STACK_AT_LEAST(ctx, i);
+
+	if (0 != i)
+	{
+		tos = ctx->sp[i];
+
+		while(i)
+		{
+			ctx->sp[i] = ctx->sp[i - 1];
+			i--;
+		}
+		ctx->sp[0] = tos;
+	}
+}
+
+// CS-ROLL ( C: origu | destu origu-1 | destu-1 ... orig0 | dest0 -- origu-1 | destu-1 ... orig0 | dest0 origu | destu ) ( S: u -- )
+void forth_csroll(forth_runtime_context_t *ctx)
+{
+	forth_cell_t ix = forth_POP(ctx);
+	forth_PUSH(ctx, 2*ix + 1);
+	forth_roll(ctx);
+	forth_PUSH(ctx, 2*ix + 1);
+	forth_roll(ctx);
 }
 
 // SWAP ( x y -- y x )
@@ -1881,13 +1970,19 @@ DEF_FORTH_WORD("(",          0, forth_paren,         " ( -- )"),
 DEF_FORTH_WORD(".(",         0, forth_dot_paren,     " ( -- )"),
 
 DEF_FORTH_WORD("dup",        0, forth_dup,           "( x -- x x )"),
-DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- x )"),
+DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- )"),
+DEF_FORTH_WORD("nip",        0, forth_nip,           "( x y -- y )"),
+DEF_FORTH_WORD("tuck",       0, forth_tuck,          "( x y -- y x y)"),
+DEF_FORTH_WORD("rot",        0, forth_rot,           "( x y z -- y z x)"),
+DEF_FORTH_WORD("-rot",       0, forth_mrot,          "( x y z -- z x y)"),
+DEF_FORTH_WORD("pick",		 0, forth_pick,			 "( xu..x1 x0 u --  xu..x1 x0 xu)"),
+DEF_FORTH_WORD("roll",       0, forth_roll,          "( xu xu-1 ... x0 u -- xu-1 ... x0 xu )"),
 DEF_FORTH_WORD("swap",       0, forth_swap,          "( x y -- y x )"),
 DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),
-DEF_FORTH_WORD("@",          0, forth_fetch,          "( addr -- val )"),
-DEF_FORTH_WORD("!",          0, forth_store,          "( val addr -- )"),
-DEF_FORTH_WORD("c@",         0, forth_cfetch,         "( addr -- char )"),
-DEF_FORTH_WORD("c!",         0, forth_cstore,         "( char addr -- )"),
+DEF_FORTH_WORD("@",          0, forth_fetch,         "( addr -- val )"),
+DEF_FORTH_WORD("!",          0, forth_store,         "( val addr -- )"),
+DEF_FORTH_WORD("c@",         0, forth_cfetch,        "( addr -- char )"),
+DEF_FORTH_WORD("c!",         0, forth_cstore,        "( char addr -- )"),
 DEF_FORTH_WORD("2dup",       0, forth_2dup,          "( x y -- x y x y )"),
 DEF_FORTH_WORD("2drop",      0, forth_2drop,         "( x y -- )"),
 DEF_FORTH_WORD("2swap",      0, forth_2swap,         "( x y a b -- a b x y )"),
@@ -1951,6 +2046,8 @@ DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
 DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" --)"),
 DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" --)"),
+DEF_FORTH_WORD("cs-pick",	 0, forth_cspick,		  "Pick for the control-flow stack."),
+DEF_FORTH_WORD("cs-roll",	 0, forth_csroll,		  "Roll for the control-flow stack."),
 
 DEF_FORTH_WORD("bl", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_CHAR_SPACE, "( -- space )"),
 

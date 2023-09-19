@@ -143,7 +143,7 @@ extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_
 
 extern void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code);
 extern void forth_PUSH(forth_runtime_context_t *ctx, forth_ucell_t x);
-extern void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, int n);
+extern void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, forth_cell_t n);
 extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
 extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
 extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
@@ -192,6 +192,14 @@ extern void forth_abs(forth_runtime_context_t *ctx);
 extern void forth_depth(forth_runtime_context_t *ctx);
 extern void forth_dup(forth_runtime_context_t *ctx);
 extern void forth_drop(forth_runtime_context_t *ctx);
+extern void forth_nip(forth_runtime_context_t *ctx);
+extern void forth_tuck(forth_runtime_context_t *ctx);
+extern void forth_rot(forth_runtime_context_t *ctx);
+extern void forth_mrot(forth_runtime_context_t *ctx); // -ROT
+extern void forth_roll(forth_runtime_context_t *ctx);
+extern void forth_pick(forth_runtime_context_t *ctx);
+extern void forth_cspick(forth_runtime_context_t *ctx);
+extern void forth_csroll(forth_runtime_context_t *ctx);
 extern void forth_swap(forth_runtime_context_t *ctx);
 extern void forth_over(forth_runtime_context_t *ctx);
 extern void forth_fetch(forth_runtime_context_t *ctx); // @
