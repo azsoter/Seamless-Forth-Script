@@ -1384,7 +1384,7 @@ forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
     // We are discarding the 'const' qualifier from the pointer
     // but our options are limited,
     //see FIND-NAME for details.
-    res = forth_CATCH(ctx, (forth_xt_t)&forth_interpret_xt);
+    res = forth_CATCH(ctx, forth_interpret_xt);
     forth_PRINT_ERROR(ctx, res);
     return res;
 }
@@ -1675,19 +1675,42 @@ forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t 
 	return res;
 }
 
+forth_vocabulary_entry_t *forth_PARSE_NAME_AND_CREATE_ENTRY(forth_runtime_context_t *ctx)
+{
+	forth_parse_name(ctx);
+
+	if (0 == ctx->sp[0])
+	{
+		forth_THROW(ctx, -16); // Attempt to use zero-length string as a name.
+	}
+
+	return forth_CREATE_DICTIONARY_ENTRY(ctx);
+}
+
+// VARIABLE ( "name" -- )
 void forth_variable(forth_runtime_context_t *ctx)
 {
 	forth_vocabulary_entry_t *entry;
-	//const char *name;
-	//forth_cell_t len;
-	forth_parse_name(ctx);
-	//len = forth_POP(ctx);
-	//name = (const char *)forth_POP(ctx);
-	entry = forth_CREATE_DICTIONARY_ENTRY(ctx);
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
 	entry->flags = FORTH_XT_FLAGS_ACTION_VARIABLE;
 	entry->link = ctx->dictionary->latest;
 	ctx->dictionary->latest = (forth_cell_t)entry;
 }
+
+// CONSTANT ( value "name" -- )
+void forth_constant(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+	forth_cell_t value = forth_POP(ctx);
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_CONSTANT;
+	entry->meaning = value;
+	entry->link = ctx->dictionary->latest;
+	ctx->dictionary->latest = (forth_cell_t)entry;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // HELP ( -- )
 void forth_help(forth_runtime_context_t *ctx)
@@ -1767,16 +1790,9 @@ void forth_tick(forth_runtime_context_t *ctx)
 
 const forth_vocabulary_entry_t forth_wl_forth[] =
 {
-DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
-DEF_FORTH_WORD( "bye",        0, forth_bye,           "( -- )"),
-
 DEF_FORTH_WORD("(",          0, forth_paren,         " ( -- )"),
 DEF_FORTH_WORD(".(",         0, forth_dot_paren,     " ( -- )"),
 
-DEF_FORTH_WORD("execute",    0, forth_execute,       "( xt -- )"),
-DEF_FORTH_WORD("catch",      0, forth_catch,         "( xt -- code )"),
-DEF_FORTH_WORD("throw",      0, forth_throw,         "( code -- )"),
-DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
 DEF_FORTH_WORD("dup",        0, forth_dup,           "( x -- x x )"),
 DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- x )"),
 DEF_FORTH_WORD("swap",       0, forth_swap,          "( x y -- y x )"),
@@ -1795,6 +1811,11 @@ DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
 DEF_FORTH_WORD("and",        0, forth_and,           "( x y -- x&y )"),
 DEF_FORTH_WORD("or",         0, forth_or,            "( x y -- x|y )"),
 DEF_FORTH_WORD("xor",        0, forth_xor,           "( x y -- x^y )"),
+
+DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
+DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
+DEF_FORTH_WORD("true", FORTH_XT_FLAGS_ACTION_CONSTANT, ~0, 0),
+DEF_FORTH_WORD("false", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, 0),
 
 DEF_FORTH_WORD("type",       0, forth_type,          "( addr count -- )"),
 DEF_FORTH_WORD("space",      0, forth_space,         "( -- )" ),
@@ -1820,7 +1841,7 @@ DEF_FORTH_WORD("parse",      0, forth_parse,         "( char -- c-addr len )"),
 DEF_FORTH_WORD("parse-name", 0, forth_parse_name,    "( \"name\" -- c-addr len )"),
 DEF_FORTH_WORD("find-name",  0, forth_find_name,     "( c-addr len -- xt|0)"),
 DEF_FORTH_WORD("'",          0, forth_tick,          "( \"name\" -- xt )"),
-DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
+
 DEF_FORTH_WORD(".error",     0, forth_print_error,   "( error_code -- )"),
 DEF_FORTH_WORD("noop",       0, forth_noop,          "( -- )"),
 DEF_FORTH_WORD("decimal",    0, forth_decimal,       "( -- )"),
@@ -1836,19 +1857,36 @@ DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
 DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
 DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
-DEF_FORTH_WORD("variable",   0, forth_variable,       "( \"name\" --)"),
-DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
-DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
-DEF_FORTH_WORD("true", FORTH_XT_FLAGS_ACTION_CONSTANT, ~0, 0),
-DEF_FORTH_WORD("false", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, 0),
+DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" --)"),
+DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" --)"),
+
 DEF_FORTH_WORD("bl", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_CHAR_SPACE, "( -- space )"),
+DEF_FORTH_WORD("execute",    0, forth_execute,       "( xt -- )"),
+DEF_FORTH_WORD("catch",      0, forth_catch,         "( xt -- code )"),
+DEF_FORTH_WORD("throw",      0, forth_throw,         "( code -- )"),
+DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
+DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
+DEF_FORTH_WORD( "bye",        0, forth_bye,           "( -- )"),
 
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
-const forth_vocabulary_entry_t forth_interpret_xt =     DEF_FORTH_WORD("INTERPRET",  0, forth_interpret,      "( -- )" );
+// -----------------------------------------------------------------------------------------------
+// Some headers (used as execution tokens) that the system needs to refer to from C code.
+// The order of these matters, so do not change this array unless you know what you are doing.
+//
+const forth_vocabulary_entry_t forth_wl_system[] =
+{
+DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
+DEF_FORTH_WORD(0, 0, 0, 0)
+};
+
+// These refer to items in the array above, if you change one you are likely need to change the other.
+//
+const forth_xt_t forth_interpret_xt = (const forth_xt_t)&(forth_wl_system[0]);
+// -----------------------------------------------------------------------------------------------
 
 // Interpret the text in CMD.
 // The command is passed as address and length (so we can interpret substrings inside some bigger buffer).

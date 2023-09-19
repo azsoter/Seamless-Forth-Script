@@ -96,6 +96,7 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
 // The master list of all arrays that contain (compiled in) entires of Forth words (usually implemented in C).
 const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
     forth_wl_forth,
+    forth_wl_system,
     0
 };
 

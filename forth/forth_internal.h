@@ -127,8 +127,9 @@ struct forth_runtime_context
 };
 
 extern const forth_vocabulary_entry_t forth_wl_forth[];
+extern const forth_vocabulary_entry_t forth_wl_system[];
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
-extern const forth_vocabulary_entry_t forth_interpret_xt;
+extern const forth_xt_t forth_interpret_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);
@@ -224,6 +225,7 @@ extern void forth_allot(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); // C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 // ,
 extern void forth_variable(forth_runtime_context_t *ctx);
+extern void forth_constant(forth_runtime_context_t *ctx);
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 
