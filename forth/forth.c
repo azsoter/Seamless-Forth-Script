@@ -1389,6 +1389,45 @@ forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
     return res;
 }
 
+// EVALUATE ( i * x c-addr u -- j * x )
+void forth_evaluate(forth_runtime_context_t *ctx)
+{
+	forth_scell_t res;
+	forth_cell_t len = forth_POP(ctx);
+	forth_cell_t addr = forth_POP(ctx);
+	forth_cell_t saved_source_id = ctx->source_id;
+	forth_cell_t saved_blk = ctx->blk;
+	forth_cell_t saved_in = ctx->to_in;
+	const char *saved_source_address = ctx->source_address;
+	forth_cell_t saved_source_length = ctx->source_length;
+
+
+	if (0 == len)
+	{
+		return; // Nothing to do.
+	}
+
+	if (0 == addr)
+	{
+		forth_THROW(ctx, -9); // Invalid address.
+	}
+
+	ctx->source_id = -1;
+	ctx->blk = 0;
+	ctx->source_address = (const char *)addr;
+	ctx->source_length = len;
+	ctx->to_in = 0;
+
+    res = forth_CATCH(ctx, forth_interpret_xt);
+
+	ctx->source_id = saved_source_id;
+	ctx->blk = saved_blk;
+	ctx->to_in = saved_in;
+	ctx->source_address = saved_source_address;
+	ctx->source_length = saved_source_length;
+	forth_THROW(ctx, res);
+}
+
 // QUIT ( -- ) ( R: i * x -- )
 void forth_quit(forth_runtime_context_t *ctx)
 {
@@ -1861,14 +1900,16 @@ DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" --)"),
 DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" --)"),
 
 DEF_FORTH_WORD("bl", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_CHAR_SPACE, "( -- space )"),
+
 DEF_FORTH_WORD("execute",    0, forth_execute,       "( xt -- )"),
 DEF_FORTH_WORD("catch",      0, forth_catch,         "( xt -- code )"),
 DEF_FORTH_WORD("throw",      0, forth_throw,         "( code -- )"),
 DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
+DEF_FORTH_WORD("evaluate",   0, forth_evaluate,		 "( c-addr len -- )"),
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
 DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
-DEF_FORTH_WORD( "bye",        0, forth_bye,           "( -- )"),
+DEF_FORTH_WORD( "bye",        0, forth_bye,          "( -- )"),
 
 DEF_FORTH_WORD(0, 0, 0, 0)
 };

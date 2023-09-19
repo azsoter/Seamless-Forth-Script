@@ -207,6 +207,7 @@ extern void forth_xor(forth_runtime_context_t *ctx);
 extern void forth_find_name(struct forth_runtime_context *ctx);
 extern void forth_tick(forth_runtime_context_t *ctx);
 
+extern void forth_evaluate(forth_runtime_context_t *ctx);
 extern void forth_words(forth_runtime_context_t *ctx);
 extern void forth_help(forth_runtime_context_t *ctx);
 extern void forth_quit(forth_runtime_context_t *ctx);
