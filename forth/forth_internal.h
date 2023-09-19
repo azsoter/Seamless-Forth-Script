@@ -132,6 +132,7 @@ extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_xt_t forth_interpret_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
+
 extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx);
@@ -142,6 +143,7 @@ extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_
 
 extern void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code);
 extern void forth_PUSH(forth_runtime_context_t *ctx, forth_ucell_t x);
+extern void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, int n);
 extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
 extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
 extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
@@ -183,6 +185,10 @@ extern void forth_parse_name(forth_runtime_context_t *ctx);
 extern void forth_paren(forth_runtime_context_t *ctx);
 extern void forth_dot_paren(forth_runtime_context_t *ctx);
 
+extern void forth_invert(forth_runtime_context_t *ctx);
+extern void forth_negate(forth_runtime_context_t *ctx);
+extern void forth_abs(forth_runtime_context_t *ctx);
+
 extern void forth_depth(forth_runtime_context_t *ctx);
 extern void forth_dup(forth_runtime_context_t *ctx);
 extern void forth_drop(forth_runtime_context_t *ctx);
@@ -190,6 +196,8 @@ extern void forth_swap(forth_runtime_context_t *ctx);
 extern void forth_over(forth_runtime_context_t *ctx);
 extern void forth_fetch(forth_runtime_context_t *ctx); // @
 extern void forth_store(forth_runtime_context_t *ctx); // !
+extern void forth_cfetch(forth_runtime_context_t *ctx); // C@
+extern void forth_cstore(forth_runtime_context_t *ctx); // C!
 extern void forth_2drop(forth_runtime_context_t *ctx);
 extern void forth_2swap(forth_runtime_context_t *ctx);
 extern void forth_2dup(forth_runtime_context_t *ctx);

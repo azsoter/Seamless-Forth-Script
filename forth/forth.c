@@ -51,6 +51,15 @@ void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code)
     }
 }
 
+// Check if the stack contains at least n items.
+void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, int n)
+{
+	if ((ctx->sp + n) > ctx->sp_max)
+    {
+        forth_THROW(ctx, -4);
+    }
+}
+
 // Push an item to the data stack, perform stack checking.
 void forth_PUSH(forth_runtime_context_t *ctx, forth_ucell_t x)
 {
@@ -240,6 +249,45 @@ void forth_store(forth_runtime_context_t *ctx)
 	*p = c;
 }
 
+// C@ ( addr - val )
+void forth_cfetch(forth_runtime_context_t *ctx)
+{
+	uint8_t *p = (uint8_t *)forth_POP(ctx);
+	uint8_t  c = *p;
+	forth_PUSH(ctx, (forth_cell_t)c);
+}
+
+// C! ( val addr - )
+void forth_cstore(forth_runtime_context_t *ctx)
+{
+	uint8_t *p = (uint8_t *)forth_POP(ctx);
+	uint8_t  c = (uint8_t)forth_POP(ctx);
+	*p = c;
+}
+
+// INVERT ( x -- ~x )
+void forth_invert(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] = ~(ctx->sp[0]);
+}
+
+// NEGATE ( x -- -x )
+void forth_negate(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] = (forth_cell_t)(-1*(forth_scell_t)ctx->sp[0]);
+}
+
+// ABS ( x -- |x| )
+void forth_abs(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	if (0 > (forth_scell_t)(ctx->sp[0]))
+	{
+		ctx->sp[0] = (forth_cell_t)(-1*(forth_scell_t)ctx->sp[0]);
+	}
+}
 // ------------------------------------------------
 // 2DROP ( x y -- )
 void forth_2drop(forth_runtime_context_t *ctx)
@@ -1838,6 +1886,8 @@ DEF_FORTH_WORD("swap",       0, forth_swap,          "( x y -- y x )"),
 DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),
 DEF_FORTH_WORD("@",          0, forth_fetch,          "( addr -- val )"),
 DEF_FORTH_WORD("!",          0, forth_store,          "( val addr -- )"),
+DEF_FORTH_WORD("c@",         0, forth_cfetch,         "( addr -- char )"),
+DEF_FORTH_WORD("c!",         0, forth_cstore,         "( char addr -- )"),
 DEF_FORTH_WORD("2dup",       0, forth_2dup,          "( x y -- x y x y )"),
 DEF_FORTH_WORD("2drop",      0, forth_2drop,         "( x y -- )"),
 DEF_FORTH_WORD("2swap",      0, forth_2swap,         "( x y a b -- a b x y )"),
@@ -1850,6 +1900,9 @@ DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
 DEF_FORTH_WORD("and",        0, forth_and,           "( x y -- x&y )"),
 DEF_FORTH_WORD("or",         0, forth_or,            "( x y -- x|y )"),
 DEF_FORTH_WORD("xor",        0, forth_xor,           "( x y -- x^y )"),
+DEF_FORTH_WORD("invert",     0, forth_invert,        "( x -- ~x )"),
+DEF_FORTH_WORD("negate",     0, forth_negate,        "( x -- -x )"),
+DEF_FORTH_WORD("abs",     	 0, forth_abs,        	 "( x -- |x| )"),
 
 DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
 DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
