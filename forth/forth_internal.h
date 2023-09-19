@@ -126,10 +126,13 @@ struct forth_runtime_context
 #endif
 };
 
+#define FORTH_COLON_SYS_MARKER 0x4e4c4f43
+
 extern const forth_vocabulary_entry_t forth_wl_forth[];
 extern const forth_vocabulary_entry_t forth_wl_system[];
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_xt_t forth_interpret_xt;
+extern const forth_xt_t forth_LIT_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
@@ -148,6 +151,7 @@ extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
 extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
 extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
 extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
+#define forth_COMPILE_COMMA(CTX , XT) forth_COMMA((CTX), (forth_cell_t)(XT))
 
 extern void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt);
@@ -233,6 +237,8 @@ extern void forth_decimal(forth_runtime_context_t *ctx);
 extern void forth_hex(forth_runtime_context_t *ctx);
 extern void forth_base(forth_runtime_context_t *ctx);
 extern void forth_state(forth_runtime_context_t *ctx);
+extern void forth_left_bracket(forth_runtime_context_t *ctx);
+extern void forth_right_bracket(forth_runtime_context_t *ctx);
 
 extern void forth_here(forth_runtime_context_t *ctx);
 extern void forth_unused(forth_runtime_context_t *ctx);
@@ -241,8 +247,12 @@ extern void forth_aligned(forth_runtime_context_t *ctx);
 extern void forth_allot(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); // C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 // ,
+extern void forth_literal(forth_runtime_context_t *ctx);
+extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);
+extern void forth_colon(forth_runtime_context_t *ctx);
+extern void forth_semicolon(forth_runtime_context_t *ctx);
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 

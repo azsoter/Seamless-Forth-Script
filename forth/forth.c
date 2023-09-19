@@ -1344,6 +1344,8 @@ void forth_interpret(forth_runtime_context_t *ctx)
     int res;
     forth_cell_t symbol_len;
     forth_cell_t symbol_addr;
+	forth_xt_t xt;
+
     while(1)
     {
         forth_parse_name(ctx);
@@ -1356,20 +1358,43 @@ void forth_interpret(forth_runtime_context_t *ctx)
         forth_PUSH(ctx, symbol_addr);
         forth_PUSH(ctx, symbol_len);
         forth_find_name(ctx);
-        if (0 != *(ctx->sp))
+		xt = (forth_xt_t)forth_POP(ctx);
+        if (0 != xt)
         {
-            forth_execute(ctx);
+			if ((0 == ctx->state) || (0 != (FORTH_XT_FLAGS_IMMEDIATE & xt->flags)))
+			{
+            	forth_EXECUTE(ctx, xt);
+			}
+			else
+			{
+				forth_COMPILE_COMMA(ctx, xt);
+			}
         }
         else
         {
-            (void)forth_POP(ctx);
+            //(void)forth_POP(ctx);
             res = forth_PROCESS_NUMBER(ctx, (const char *)symbol_addr, symbol_len);
             // forth_dots(ctx);
             if (0 > res)
             {
                 forth_THROW(ctx, -13);
             }
-            forth_drop(ctx);
+			
+			if (0 == ctx->state)
+			{
+            	forth_drop(ctx);
+			}
+			else
+			{
+				if (0 == forth_POP(ctx))
+				{
+					forth_literal(ctx);
+				}
+				else
+				{
+					forth_2literal(ctx);
+				}
+			}
         }
     }
 }
@@ -1638,6 +1663,17 @@ void forth_state(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, (forth_cell_t) &(ctx->state));
 }
 
+// [ ( -- )
+void forth_left_bracket(forth_runtime_context_t *ctx)
+{
+	ctx->state = 0;
+}
+
+// ]  ( -- )
+void forth_right_bracket(forth_runtime_context_t *ctx)
+{
+	ctx->state = FORTH_XT_FLAGS_IMMEDIATE;
+}
 // ---------------------------------------------------------------------------------------------------------------
 //                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
@@ -1681,6 +1717,23 @@ void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt)
 void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
 	forth_PUSH(ctx, (forth_cell_t) &(xt->meaning));
+}
+
+// Compiled by LITERAL
+// ( -- n )
+void forth_lit(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -9); // Invalid address.
+	}
+
+	forth_PUSH(ctx, (forth_cell_t) *(ctx->ip++));
 }
 
 // HERE ( -- addr )
@@ -1847,8 +1900,25 @@ forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t 
 	forth_COMMA(ctx, (forth_cell_t)here);				// name
 	forth_COMMA(ctx, 0);								// flags
 	forth_COMMA(ctx, ctx->dictionary->latest);			// link
-	forth_COMMA(ctx, 0);			// place holder for meaning
+	//forth_COMMA(ctx, 0);			// place holder for meaning
 	return res;
+}
+
+// LITERAL Compile: ( x -- ) Run: ( -- x ) 
+void forth_literal(forth_runtime_context_t *ctx)
+{
+	forth_COMPILE_COMMA(ctx, forth_LIT_xt);
+	forth_comma(ctx);
+}
+
+// 2LITERAL Compile: ( x y -- ) Run: ( -- x y ) 
+void forth_2literal(forth_runtime_context_t *ctx)
+{
+	forth_swap(ctx);
+	forth_COMPILE_COMMA(ctx, forth_LIT_xt);
+	forth_comma(ctx);
+	forth_COMPILE_COMMA(ctx, forth_LIT_xt);
+	forth_comma(ctx);
 }
 
 forth_vocabulary_entry_t *forth_PARSE_NAME_AND_CREATE_ENTRY(forth_runtime_context_t *ctx)
@@ -1870,6 +1940,7 @@ void forth_variable(forth_runtime_context_t *ctx)
 
 	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
 	entry->flags = FORTH_XT_FLAGS_ACTION_VARIABLE;
+	forth_COMMA(ctx, 0); // Meaning.
 	entry->link = ctx->dictionary->latest;
 	ctx->dictionary->latest = (forth_cell_t)entry;
 }
@@ -1882,9 +1953,44 @@ void forth_constant(forth_runtime_context_t *ctx)
 
 	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
 	entry->flags = FORTH_XT_FLAGS_ACTION_CONSTANT;
-	entry->meaning = value;
+	//entry->meaning = value;
+	forth_COMMA(ctx, value); // Meaning.
 	entry->link = ctx->dictionary->latest;
 	ctx->dictionary->latest = (forth_cell_t)entry;
+}
+
+// : ( "name" -- colon-sys)
+void forth_colon(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_THREADED;
+	forth_PUSH(ctx, (forth_cell_t)entry);
+	forth_PUSH(ctx, FORTH_COLON_SYS_MARKER);
+	forth_right_bracket(ctx);
+}
+
+// ; ( colon-sys -- )
+void forth_semicolon(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+
+	if (0 == ctx->state)
+	{
+		forth_THROW(ctx, -14); // Interpreting a compile-only word.
+	}
+
+	if (FORTH_COLON_SYS_MARKER != forth_POP(ctx))
+	{
+		forth_THROW(ctx, -22); // Control structure mismatch.
+	}
+
+	forth_COMPILE_COMMA(ctx, 0);
+	entry = (forth_vocabulary_entry_t *)forth_POP(ctx);
+	entry->link = ctx->dictionary->latest;
+	ctx->dictionary->latest = (forth_cell_t)entry;
+	forth_left_bracket(ctx);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -1966,8 +2072,8 @@ void forth_tick(forth_runtime_context_t *ctx)
 
 const forth_vocabulary_entry_t forth_wl_forth[] =
 {
-DEF_FORTH_WORD("(",          0, forth_paren,         " ( -- )"),
-DEF_FORTH_WORD(".(",         0, forth_dot_paren,     " ( -- )"),
+DEF_FORTH_WORD("(",  FORTH_XT_FLAGS_IMMEDIATE, forth_paren,         " ( -- )"),
+DEF_FORTH_WORD(".(", FORTH_XT_FLAGS_IMMEDIATE, forth_dot_paren,     " ( -- )"),
 
 DEF_FORTH_WORD("dup",        0, forth_dup,           "( x -- x x )"),
 DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- )"),
@@ -2035,6 +2141,9 @@ DEF_FORTH_WORD("decimal",    0, forth_decimal,       "( -- )"),
 DEF_FORTH_WORD("hex",    	 0, forth_hex,       	 "( -- )"),
 DEF_FORTH_WORD("base",       0, forth_base,          "( -- addr )"),
 
+DEF_FORTH_WORD("[", FORTH_XT_FLAGS_IMMEDIATE, forth_left_bracket,   "Enter interpretation state."),
+DEF_FORTH_WORD("]",      	               0, forth_right_bracket,  "Enter compilation state."),
+
 DEF_FORTH_WORD("state",      0, forth_state,         "( -- addr )"),
 DEF_FORTH_WORD("here",       0, forth_here,          "( -- addr )"),
 DEF_FORTH_WORD("unused",     0, forth_unused,        "( -- u )"),
@@ -2044,6 +2153,10 @@ DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
 DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
 DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
+DEF_FORTH_WORD("literal",    0, forth_literal,       "( x --  )"),
+DEF_FORTH_WORD("2literal",   0, forth_2literal,      "( x y --  )"),
+DEF_FORTH_WORD(":",   		 0, forth_colon,         "( \"name\" -- colon-sys )"),
+DEF_FORTH_WORD(";", FORTH_XT_FLAGS_IMMEDIATE, forth_semicolon, "( colon-sys -- )"),
 DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" --)"),
 DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" --)"),
 DEF_FORTH_WORD("cs-pick",	 0, forth_cspick,		  "Pick for the control-flow stack."),
@@ -2071,12 +2184,14 @@ DEF_FORTH_WORD(0, 0, 0, 0)
 const forth_vocabulary_entry_t forth_wl_system[] =
 {
 DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
+DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
 // These refer to items in the array above, if you change one you are likely need to change the other.
 //
 const forth_xt_t forth_interpret_xt = (const forth_xt_t)&(forth_wl_system[0]);
+const forth_xt_t forth_LIT_xt = (const forth_xt_t)&(forth_wl_system[1]);
 // -----------------------------------------------------------------------------------------------
 
 // Interpret the text in CMD.
