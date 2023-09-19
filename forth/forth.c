@@ -1692,35 +1692,39 @@ void forth_variable(forth_runtime_context_t *ctx)
 // HELP ( -- )
 void forth_help(forth_runtime_context_t *ctx)
 {
-    const forth_vocabulary_entry_t *ep = forth_wl_forth;
+	const forth_vocabulary_entry_t **wl;// = forth_master_list_of_lists;
+    const forth_vocabulary_entry_t *ep;
 
-    while (0 != ep->name)
+   	for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
     {
-        forth_TYPE0(ctx, (char *)(ep->name));
-
+    	for (ep = *wl; 0 != ep->name; ep++)
+    	{
+        	forth_TYPE0(ctx, (char *)(ep->name));
 #if !defined(FORTH_EXCLUDE_DESCRIPTIONS)
-        if (0 != ep->link)
-        {
-            forth_EMIT(ctx, '\t');
-            forth_TYPE0(ctx, (char *)(ep->link));
-        }
+        	if (0 != ep->link)
+        	{
+            	forth_EMIT(ctx, '\t');
+            	forth_TYPE0(ctx, (char *)(ep->link));
+        	}
 #endif
-
-        forth_cr(ctx);
-        ep++;
-    }
+        	forth_cr(ctx);
+    	}
+	}
 }
 
 void forth_words(forth_runtime_context_t *ctx)
 {
     size_t len;
-   const forth_vocabulary_entry_t *ep;
+   	const forth_vocabulary_entry_t *ep;
+    const forth_vocabulary_entry_t **wl = forth_master_list_of_lists;
 
 	if (0 != ctx->dictionary)
 	{
-		ep = (forth_vocabulary_entry_t *)(ctx->dictionary->latest);
-		while (0 != ep)
+
+		for (ep = (forth_vocabulary_entry_t *)(ctx->dictionary->latest); 0 != ep; ep = (forth_vocabulary_entry_t *)(ep->link))
 		{
+			len = strlen((char *)(ep->name));
+
 			if ((ctx->terminal_width - ctx->terminal_col) <= len)
 			{
             	forth_cr(ctx);
@@ -1728,25 +1732,25 @@ void forth_words(forth_runtime_context_t *ctx)
 
         	forth_TYPE0(ctx, (char *)(ep->name));
         	forth_space(ctx);
-			ep = (forth_vocabulary_entry_t *)(ep->link);
+			//ep = (forth_vocabulary_entry_t *)(ep->link);
 		}
 	}
 
-	ep = forth_wl_forth;
-    while (0 != ep->name)
+    for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
     {
+    	for (ep = *wl; 0 != ep->name; ep++)
+    	{
+        	len = strlen((char *)(ep->name));
 
-        len = strlen((char *)(ep->name));
+        	if ((ctx->terminal_width - ctx->terminal_col) <= len)
+			{
+            	forth_cr(ctx);
+        	}
 
-        if ((ctx->terminal_width - ctx->terminal_col) <= len)
-		{
-            forth_cr(ctx);
-        }
-
-        forth_TYPE0(ctx, (char *)(ep->name));
-        forth_space(ctx);
-        ep++;
-    }
+        	forth_TYPE0(ctx, (char *)(ep->name));
+        	forth_space(ctx);
+    	}
+	}
 
     forth_cr(ctx);
 }

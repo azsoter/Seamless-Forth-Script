@@ -30,6 +30,8 @@
 #include <forth.h>
 #include <forth_internal.h>
 
+// Compare a name (stored as a zero terminad string) to an input token (given as a c-addr, length pair)
+// if they match (compare the same in a case insensitive comparison).
 // Returns -1 (true) if the names match.
 // Returns 0 (false) if the names do not match.
 int forth_compare_names(const char *name, const char *input_word, int input_word_length)
@@ -44,27 +46,30 @@ int forth_compare_names(const char *name, const char *input_word, int input_word
     return strncasecmp(name, input_word, input_word_length) ? 0 : -1;
 }
 
+// Find a name in a list (array) of names.
+// Return the address of the entry that matches the name or zero (NULL) if the name is not found.
 const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length)
 {
-    const forth_vocabulary_entry_t *p = list;
+    const forth_vocabulary_entry_t *p;
 
-    if ((0 == p) || (0 == name))
+    if ((0 == list) || (0 == name) || (0 == name_length))
     {
         return 0;
     }
 
-    while (0 != p->name)
+    for (p = list; 0 != p->name; p++)
     {
         if (forth_compare_names((char *)(p->name), name, name_length))
         {
             return p;
         }
-        p++;
     }
 
     return 0;
 }
 
+// Find a name in the live (user defined) forth dictionary (which is a linked list, not an array).
+// Return the address of the entry that matches the name or zero (NULL) if the name is not found.
 forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary, const char *name, int name_length)
 {
     forth_vocabulary_entry_t *p;
@@ -74,9 +79,7 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
         return 0;
     }
    
-	p = (forth_vocabulary_entry_t *)(dictionary->latest);
-    
-	while (0 != p)
+	for (p = (forth_vocabulary_entry_t *)(dictionary->latest); 0 != p;  p = (forth_vocabulary_entry_t *)(p->link))
 	{
         if (0 != p->name)
         {
@@ -84,23 +87,28 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
             {
                 return p;
             }  
-        }
-        p = (forth_vocabulary_entry_t *)(p->link);
+        }  
     }
 
     return p;
 }
 
+// The master list of all arrays that contain (compiled in) entires of Forth words (usually implemented in C).
 const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
     forth_wl_forth,
     0
 };
 
+// Search all available lists for the name (passed as a c-addr, len pain or the data stack).
+// If the name is found return the corresponding execution token.
+// If the name is not found return 0.
 // https://forth-standard.org/proposals/find-name
-// ( c-addr len -- xt|0 )
+//
+// FIND-NAME ( c-addr len -- xt|0 )
+//
 void forth_find_name(struct forth_runtime_context *ctx)
 {
-    const forth_vocabulary_entry_t **wl = forth_master_list_of_lists;
+    const forth_vocabulary_entry_t **wl;
     const forth_vocabulary_entry_t *ep = 0;
     forth_cell_t len = forth_POP(ctx);
     forth_cell_t addr = forth_POP(ctx);
@@ -109,14 +117,13 @@ void forth_find_name(struct forth_runtime_context *ctx)
 
     if (0 == ep)
     {
-        while (0 != *wl)
+        for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
         {
             ep = forth_SEARCH_LIST(*wl, (char *)addr, (int)len);
             if (0 != ep)
             {
                 break;
             }
-            wl++;
         }
     }
 
