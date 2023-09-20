@@ -235,11 +235,23 @@ extern void forth_2over(forth_runtime_context_t *ctx);
 extern void forth_2rot(forth_runtime_context_t *ctx);
 extern void forth_2fetch(forth_runtime_context_t *ctx); 			// 2@
 extern void forth_2store(forth_runtime_context_t *ctx); 			// 2!
+
+extern void forth_to_r(forth_runtime_context_t *ctx);				// >R
+extern void forth_r_fetch(forth_runtime_context_t *ctx);			// R@
+extern void forth_r_from(forth_runtime_context_t *ctx);				// R>
+extern void forth_2to_r(forth_runtime_context_t *ctx);				// 2>R
+extern void forth_2r_fetch(forth_runtime_context_t *ctx);			// 2R@
+extern void forth_2r_from(forth_runtime_context_t *ctx);			// 2R>
+extern void forth_n_to_r(forth_runtime_context_t *ctx);				// N>R
+extern void forth_n_r_from(forth_runtime_context_t *ctx);			// NR>
+
 extern void forth_add(forth_runtime_context_t *ctx);
 extern void forth_subtract(forth_runtime_context_t *ctx);
 extern void forth_multiply(forth_runtime_context_t *ctx);
 extern void forth_divide(forth_runtime_context_t *ctx);
 extern void forth_mod(forth_runtime_context_t *ctx);
+extern void forth_min(forth_runtime_context_t *ctx);
+extern void forth_max(forth_runtime_context_t *ctx);
 extern void forth_and(forth_runtime_context_t *ctx);
 extern void forth_or(forth_runtime_context_t *ctx);
 extern void forth_xor(forth_runtime_context_t *ctx);

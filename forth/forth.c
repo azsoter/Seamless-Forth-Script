@@ -66,7 +66,7 @@ void forth_PUSH(forth_runtime_context_t *ctx, forth_ucell_t x)
     ctx->sp -= 1;
     if (ctx->sp < ctx->sp_min)
     {
-        forth_THROW(ctx, -3);
+        forth_THROW(ctx, -3);  // Stack overflow.
     }
     *(ctx->sp) = x;
 }
@@ -78,7 +78,30 @@ forth_cell_t forth_POP(forth_runtime_context_t *ctx)
 
     if (ctx->sp > ctx->sp_max)
     {
-        forth_THROW(ctx, -4);
+        forth_THROW(ctx, -4); // Stack underflow.
+    }
+    return x;
+}
+
+// Push an item to the return stack, perform stack checking.
+void forth_RPUSH(forth_runtime_context_t *ctx, forth_ucell_t x)
+{
+    ctx->rp -= 1;
+    if (ctx->rp < ctx->rp_min)
+    {
+        forth_THROW(ctx, -5); // Return stack overflow.
+    }
+    *(ctx->rp) = x;
+}
+
+// Pop an item from the return stack, perform stack checking.
+forth_cell_t forth_RPOP(forth_runtime_context_t *ctx)
+{
+    forth_cell_t x = *(ctx->rp++);
+
+    if (ctx->rp > ctx->rp_max)
+    {
+        forth_THROW(ctx, -6);  // Return stack underflow.
     }
     return x;
 }
@@ -548,6 +571,85 @@ void forth_2store(forth_runtime_context_t *ctx)
 	p[1] = forth_POP(ctx);
 }
 // ---------------------------------------------------------------------------------------------------------------
+//                                                Return stack operations
+// ---------------------------------------------------------------------------------------------------------------
+// >R ( x -- ) R: ( -- x )
+void forth_to_r(forth_runtime_context_t *ctx)
+{
+	forth_RPUSH(ctx, forth_POP(ctx));
+}
+
+// R@ ( -- x ) R: ( x -- x )
+void forth_r_fetch(forth_runtime_context_t *ctx)
+{
+	if ((ctx->rp + 1) > ctx->rp_max)
+    {
+        forth_THROW(ctx, -6);
+    }
+
+	forth_PUSH(ctx, ctx->rp[0]);
+}
+
+// R> ( -- x ) R: ( x -- )
+void forth_r_from(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, forth_RPOP(ctx));
+}
+
+// 2>R ( x y -- ) R: ( -- x y)
+void forth_2to_r(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_RPUSH(ctx, x);
+	forth_RPUSH(ctx, y);
+}
+
+// 2R@ ( -- x y ) R: ( x y -- x y )
+void forth_2r_fetch(forth_runtime_context_t *ctx)
+{
+	if ((ctx->rp + 2) > ctx->rp_max)
+    {
+        forth_THROW(ctx, -6);
+    }
+
+	forth_PUSH(ctx, ctx->rp[1]);
+	forth_PUSH(ctx, ctx->rp[0]);
+}
+
+// 2R> ( -- x y ) R: ( x y -- )
+void forth_2r_from(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_RPOP(ctx);
+	forth_cell_t x = forth_RPOP(ctx);
+	forth_PUSH(ctx, x);
+	forth_PUSH(ctx, y);
+}
+
+// N>R ( i*n n -- ) R: ( -- i*n n )
+void forth_n_to_r(forth_runtime_context_t *ctx)
+{
+	forth_cell_t n = forth_POP(ctx);
+	forth_cell_t i;
+	for (i = 0; i < n; i++)
+	{
+		forth_RPUSH(ctx, forth_POP(ctx));
+	}
+	forth_RPUSH(ctx, n);
+}
+
+// NR> ( -- i*n n ) R: ( i*n n -- )
+void forth_n_r_from(forth_runtime_context_t *ctx)
+{
+	forth_cell_t n = forth_RPOP(ctx);
+	forth_cell_t i;
+	for (i = 0; i < n; i++)
+	{
+		forth_PUSH(ctx, forth_RPOP(ctx));
+	}
+	forth_PUSH(ctx, n);
+}
+// ---------------------------------------------------------------------------------------------------------------
 //                                                  Arithmetics
 // ---------------------------------------------------------------------------------------------------------------
 // + ( x y -- x+y )
@@ -596,6 +698,24 @@ void forth_mod(forth_runtime_context_t *ctx)
         forth_THROW(ctx, -10);
     }
     forth_PUSH(ctx, (forth_cell_t)(x%y));
+}
+
+// MIN ( x y -- x|y )
+void forth_min(forth_runtime_context_t *ctx)
+{
+    forth_scell_t y = (forth_scell_t)forth_POP(ctx);
+    forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+    
+    forth_PUSH(ctx, (forth_cell_t)((x < y) ? x : y));
+}
+
+// MAX ( x y -- x|y )
+void forth_max(forth_runtime_context_t *ctx)
+{
+    forth_scell_t y = (forth_scell_t)forth_POP(ctx);
+    forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+    
+    forth_PUSH(ctx, (forth_cell_t)((x > y) ? x : y));
 }
 
 // AND ( x y -- x&y )
@@ -2593,12 +2713,24 @@ DEF_FORTH_WORD("2dup",       0, forth_2dup,          "( x y -- x y x y )"),
 DEF_FORTH_WORD("2drop",      0, forth_2drop,         "( x y -- )"),
 DEF_FORTH_WORD("2swap",      0, forth_2swap,         "( x y a b -- a b x y )"),
 DEF_FORTH_WORD("2over",      0, forth_2over,         "( x y a b -- x y a b x y )"),
-DEF_FORTH_WORD("2rot",       0, forth_2rot,         "( x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2 )"),
+DEF_FORTH_WORD("2rot",       0, forth_2rot,          "( x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2 )"),
+
+DEF_FORTH_WORD(">r",         0, forth_to_r,          "( x -- )     R: ( -- x )"),
+DEF_FORTH_WORD("r@",         0, forth_r_fetch,       "( -- x)      R: ( x -- x )"),
+DEF_FORTH_WORD("r>",         0, forth_r_from,        "(  -- x )    R: ( x -- )"),
+DEF_FORTH_WORD("2>r",        0, forth_2to_r,         "( x y -- )   R: ( -- x y)"),
+DEF_FORTH_WORD("2r@",        0, forth_2r_fetch,      "( -- x y )   R: ( x y -- x y )"),
+DEF_FORTH_WORD("2r>",        0, forth_2r_from,       "(  -- x y )  R: ( x y -- )"),
+DEF_FORTH_WORD("n>r",        0, forth_n_to_r,        "( i*n n  -- ) R: ( -- i*n n )"),
+DEF_FORTH_WORD("nr>",        0, forth_n_r_from,      "( -- i*n n )  R: ( i*n n -- )"),
+
 DEF_FORTH_WORD("+",          0, forth_add,           "( x y -- x+y )"),
 DEF_FORTH_WORD("-",          0, forth_subtract,      "( x y -- x-y )"),
 DEF_FORTH_WORD("*",          0, forth_multiply,      "( x y -- x*y )"),
 DEF_FORTH_WORD("/",          0, forth_divide,        "( x y -- x/y )"),
 DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
+DEF_FORTH_WORD("min",        0, forth_min,           "( x y -- min )"),
+DEF_FORTH_WORD("max",        0, forth_max,           "( x y -- max )"),
 DEF_FORTH_WORD("and",        0, forth_and,           "( x y -- x&y )"),
 DEF_FORTH_WORD("or",         0, forth_or,            "( x y -- x|y )"),
 DEF_FORTH_WORD("xor",        0, forth_xor,           "( x y -- x^y )"),
