@@ -105,7 +105,7 @@ const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
 // If the name is not found return 0.
 // https://forth-standard.org/proposals/find-name
 //
-// FIND-NAME ( c-addr len -- xt|0 )
+// FIND-NAME ( c-addr len -- nt|0 )
 //
 void forth_find_name(struct forth_runtime_context *ctx)
 {

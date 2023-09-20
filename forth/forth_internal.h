@@ -133,6 +133,7 @@ extern const forth_vocabulary_entry_t forth_wl_system[];
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_xt_t forth_interpret_xt;
 extern const forth_xt_t forth_LIT_xt;
+extern const forth_xt_t forth_SLIT_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
@@ -184,8 +185,9 @@ extern void forth_spaces(forth_runtime_context_t *ctx);
 extern void forth_dump(forth_runtime_context_t *ctx);
 
 extern void forth_parse(forth_runtime_context_t *ctx);
-// extern void forth_parse_word(forth_runtime_context_t *ctx);
 extern void forth_parse_name(forth_runtime_context_t *ctx);
+extern void forth_quot(forth_runtime_context_t *ctx);
+extern void forth_squot(forth_runtime_context_t *ctx);
 extern void forth_paren(forth_runtime_context_t *ctx);
 extern void forth_dot_paren(forth_runtime_context_t *ctx);
 
@@ -210,6 +212,7 @@ extern void forth_fetch(forth_runtime_context_t *ctx); // @
 extern void forth_store(forth_runtime_context_t *ctx); // !
 extern void forth_cfetch(forth_runtime_context_t *ctx); // C@
 extern void forth_cstore(forth_runtime_context_t *ctx); // C!
+extern void forth_questionmark(forth_runtime_context_t *ctx); // ?
 extern void forth_2drop(forth_runtime_context_t *ctx);
 extern void forth_2swap(forth_runtime_context_t *ctx);
 extern void forth_2dup(forth_runtime_context_t *ctx);
@@ -225,6 +228,8 @@ extern void forth_or(forth_runtime_context_t *ctx);
 extern void forth_xor(forth_runtime_context_t *ctx);
 
 extern void forth_find_name(struct forth_runtime_context *ctx);
+extern void forth_defined(forth_runtime_context_t *ctx);
+extern void forth_undefined(forth_runtime_context_t *ctx);
 extern void forth_tick(forth_runtime_context_t *ctx);
 
 extern void forth_evaluate(forth_runtime_context_t *ctx);
@@ -249,6 +254,7 @@ extern void forth_c_comma(forth_runtime_context_t *ctx); // C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 // ,
 extern void forth_literal(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
+extern void forth_sliteral(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);
 extern void forth_colon(forth_runtime_context_t *ctx);
