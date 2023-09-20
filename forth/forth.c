@@ -535,7 +535,38 @@ void forth_xor(forth_runtime_context_t *ctx)
     forth_cell_t x = forth_POP(ctx);
     forth_PUSH(ctx, x^y);
 }
+// ---------------------------------------------------------------------------------------------------------------
+//                                                  String/Memory Operations
+// ---------------------------------------------------------------------------------------------------------------
+// FILL ( c-addr len char -- )
+void forth_fill(forth_runtime_context_t *ctx)
+{
+	char c = (char)forth_POP(ctx);
+	forth_cell_t len = forth_POP(ctx);
+	char *addr = (char *)forth_POP(ctx);
 
+	memset(addr, c, len);
+}
+
+// ERASE ( c-addr len -- )
+void forth_erase(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, 0);
+	forth_fill(ctx);
+}
+
+// MOVE ( src dest len -- )
+void forth_move(forth_runtime_context_t *ctx)
+{
+	forth_cell_t len = forth_POP(ctx);
+	void *dst_addr = (void *)forth_POP(ctx);
+	void *src_addr = (void *)forth_POP(ctx);
+
+	if (len > 0)
+	{
+		(void)memmove(dst_addr, src_addr, (size_t)len);
+	}
+}
 // ---------------------------------------------------------------------------------------------------------------
 //                                                  Terminal I/O
 // ---------------------------------------------------------------------------------------------------------------
@@ -596,6 +627,44 @@ void forth_emit(forth_runtime_context_t *ctx)
 {
     forth_cell_t chr = forth_POP(ctx);
     forth_EMIT(ctx, (char)chr);
+}
+
+// AT-XY (x y  -- )
+void forth_at_xy(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	int res;
+
+	if (0 == ctx->at_xy)
+	{
+		forth_THROW(ctx, -21);
+	}
+
+    res = ctx->at_xy(ctx, x, y);
+
+    if (0 > res)
+    {
+        forth_THROW(ctx, -57);
+    }
+}
+
+// PAGE ( -- )
+void forth_page(forth_runtime_context_t *ctx)
+{
+	int res;
+
+	if (0 == ctx->page)
+	{
+		forth_THROW(ctx, -21);
+	}
+
+    res = ctx->page(ctx);
+
+    if (0 > res)
+    {
+        forth_THROW(ctx, -57);
+    }
 }
 
 // CR ( -- )
@@ -1029,6 +1098,36 @@ void forth_hdot(forth_runtime_context_t *ctx)
     res = forth_HDOT(ctx, value);
 
     if (0 > res)
+    {
+        forth_THROW(ctx, -57);
+    }
+}
+
+// .R ( n w -- )
+void forth_dotr(forth_runtime_context_t *ctx)
+{
+	int res;
+	forth_cell_t width = forth_POP(ctx);
+	forth_cell_t value = forth_POP(ctx);
+
+	res = forth_DOT_R(ctx, ctx->base, value, width, 1);
+
+	if (0 > res)
+    {
+        forth_THROW(ctx, -57);
+    }
+}
+
+// U.R ( u w -- )
+void forth_udotr(forth_runtime_context_t *ctx)
+{
+	int res;
+	forth_cell_t width = forth_POP(ctx);
+	forth_cell_t value = forth_POP(ctx);
+
+	res = forth_DOT_R(ctx, ctx->base, value, width, 0);
+
+	if (0 > res)
     {
         forth_THROW(ctx, -57);
     }
@@ -2291,6 +2390,10 @@ DEF_FORTH_WORD("invert",     0, forth_invert,        "( x -- ~x )"),
 DEF_FORTH_WORD("negate",     0, forth_negate,        "( x -- -x )"),
 DEF_FORTH_WORD("abs",     	 0, forth_abs,        	 "( x -- |x| )"),
 
+DEF_FORTH_WORD("erase",      0, forth_erase,          "( c-addr len -- )"),
+DEF_FORTH_WORD("fill",       0, forth_fill,           "( c-addr len char -- )"),
+DEF_FORTH_WORD("move",       0, forth_move,           "( src-addr dst-addr len -- )"),
+
 DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
 DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
 DEF_FORTH_WORD("true", FORTH_XT_FLAGS_ACTION_CONSTANT, ~0, 0),
@@ -2301,10 +2404,14 @@ DEF_FORTH_WORD("space",      0, forth_space,         "( -- )" ),
 DEF_FORTH_WORD("spaces",     0, forth_spaces,        "( n -- )"),
 DEF_FORTH_WORD("emit",       0, forth_emit,          "( char -- )"),
 DEF_FORTH_WORD("cr",         0, forth_cr,            "( -- )"),
+DEF_FORTH_WORD("page",       0, forth_page,          "( -- )"),
+DEF_FORTH_WORD("at-xy",      0, forth_at_xy,         "( x y -- )"),
 
 DEF_FORTH_WORD(".",          0, forth_dot,           "( x -- )"),
 DEF_FORTH_WORD("h.",         0, forth_hdot,          "( x -- )"),
 DEF_FORTH_WORD("u.",         0, forth_udot,          "( x -- )"),
+DEF_FORTH_WORD(".r",         0, forth_dotr,          "( x w -- )"),
+DEF_FORTH_WORD("u.r",        0, forth_udotr,         "( u w -- )"),
 DEF_FORTH_WORD(".s",         0, forth_dots,          "( -- )"),
 DEF_FORTH_WORD("dump",       0, forth_dump,          "( addr count -- )"),
 

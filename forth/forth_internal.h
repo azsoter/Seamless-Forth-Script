@@ -171,11 +171,15 @@ extern void forth_print_error(forth_runtime_context_t *ctx);
 extern void forth_type(forth_runtime_context_t *ctx);
 extern void forth_emit(forth_runtime_context_t *ctx);
 extern void forth_cr(forth_runtime_context_t *ctx);
+extern void forth_at_xy(forth_runtime_context_t *ctx);
+extern void forth_page(forth_runtime_context_t *ctx);
 
 extern void forth_dots(forth_runtime_context_t *ctx);
 extern void forth_dot(forth_runtime_context_t *ctx);
 extern void forth_hdot(forth_runtime_context_t *ctx);
 extern void forth_udot(forth_runtime_context_t *ctx);
+extern void forth_dotr(forth_runtime_context_t *ctx);	// .R
+extern void forth_udotr(forth_runtime_context_t *ctx);	// U.R
 
 extern void forth_key(forth_runtime_context_t *ctx);
 extern void forth_key_q(forth_runtime_context_t *ctx); // KEY?
@@ -230,6 +234,10 @@ extern void forth_mod(forth_runtime_context_t *ctx);
 extern void forth_and(forth_runtime_context_t *ctx);
 extern void forth_or(forth_runtime_context_t *ctx);
 extern void forth_xor(forth_runtime_context_t *ctx);
+
+extern void forth_fill(forth_runtime_context_t *ctx);
+extern void forth_erase(forth_runtime_context_t *ctx);
+extern void forth_move(forth_runtime_context_t *ctx);
 
 extern void forth_find_name(struct forth_runtime_context *ctx);
 extern void forth_bracket_defined(forth_runtime_context_t *ctx);
