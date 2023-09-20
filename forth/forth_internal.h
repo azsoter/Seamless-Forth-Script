@@ -202,9 +202,11 @@ extern void forth_dot_paren(forth_runtime_context_t *ctx);
 extern void forth_invert(forth_runtime_context_t *ctx);
 extern void forth_negate(forth_runtime_context_t *ctx);
 extern void forth_abs(forth_runtime_context_t *ctx);
-
+extern void forth_2mul(forth_runtime_context_t *ctx); // 2*
+extern void forth_2div(forth_runtime_context_t *ctx); // 2*
 extern void forth_depth(forth_runtime_context_t *ctx);
 extern void forth_dup(forth_runtime_context_t *ctx);
+extern void forth_question_dup(forth_runtime_context_t *ctx);
 extern void forth_drop(forth_runtime_context_t *ctx);
 extern void forth_nip(forth_runtime_context_t *ctx);
 extern void forth_tuck(forth_runtime_context_t *ctx);
@@ -218,6 +220,11 @@ extern void forth_swap(forth_runtime_context_t *ctx);
 extern void forth_over(forth_runtime_context_t *ctx);
 extern void forth_fetch(forth_runtime_context_t *ctx); // @
 extern void forth_store(forth_runtime_context_t *ctx); // !
+extern void forth_plus_store(forth_runtime_context_t *ctx); // +!
+extern void forth_1plus(forth_runtime_context_t *ctx);  // 1+
+extern void forth_1minus(forth_runtime_context_t *ctx); // 1-
+extern void forth_cell_plus(forth_runtime_context_t *ctx); // CELL+
+extern void forth_cells(forth_runtime_context_t *ctx);     // CELLS
 extern void forth_cfetch(forth_runtime_context_t *ctx); // C@
 extern void forth_cstore(forth_runtime_context_t *ctx); // C!
 extern void forth_questionmark(forth_runtime_context_t *ctx); // ?
@@ -225,7 +232,9 @@ extern void forth_2drop(forth_runtime_context_t *ctx);
 extern void forth_2swap(forth_runtime_context_t *ctx);
 extern void forth_2dup(forth_runtime_context_t *ctx);
 extern void forth_2over(forth_runtime_context_t *ctx);
-
+extern void forth_2rot(forth_runtime_context_t *ctx);
+extern void forth_2fetch(forth_runtime_context_t *ctx); // 2@
+extern void forth_2store(forth_runtime_context_t *ctx); // 2!
 extern void forth_add(forth_runtime_context_t *ctx);
 extern void forth_subtract(forth_runtime_context_t *ctx);
 extern void forth_multiply(forth_runtime_context_t *ctx);

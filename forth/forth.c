@@ -221,7 +221,18 @@ void forth_depth(forth_runtime_context_t *ctx)
 // DUP ( x -- x x )
 void forth_dup(forth_runtime_context_t *ctx)
 {
-    forth_PUSH(ctx, *(ctx->sp));
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+    forth_PUSH(ctx, ctx->sp[0]);
+}
+
+// ?DUP ( 0|x -- 0|x x )
+void forth_question_dup(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	if (0 != ctx->sp[0])
+	{
+    	forth_PUSH(ctx, ctx->sp[0]);
+	}
 }
 
 // DROP ( x -- )
@@ -361,6 +372,14 @@ void forth_store(forth_runtime_context_t *ctx)
 	*p = c;
 }
 
+// +! ( val addr - )
+void forth_plus_store(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *p = (forth_cell_t *)forth_POP(ctx);
+	forth_cell_t  c = forth_POP(ctx);
+	*p += c;
+}
+
 // C@ ( addr - val )
 void forth_cfetch(forth_runtime_context_t *ctx)
 {
@@ -407,6 +426,49 @@ void forth_abs(forth_runtime_context_t *ctx)
 		ctx->sp[0] = (forth_cell_t)(-1*(forth_scell_t)ctx->sp[0]);
 	}
 }
+
+// 2* ( x -- 2*x )
+void forth_2mul(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] = 2*ctx->sp[0];
+}
+
+// 2/ ( x -- x/2 )
+void forth_2div(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] = (((forth_scell_t)ctx->sp[0]) >> 1);
+}
+
+// 1+ ( x -- x+1 )
+void forth_1plus(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] += 1;
+}
+
+// 1- ( x -- x-1 )
+void forth_1minus(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] -= 1;
+}
+
+// CELL+ ( x -- y )
+void forth_cell_plus(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] += sizeof(forth_cell_t);
+}
+
+// CELLS ( x -- y )
+void forth_cells(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 1);
+	ctx->sp[0] *= sizeof(forth_cell_t);
+}
+
 // ------------------------------------------------
 // 2DROP ( x y -- )
 void forth_2drop(forth_runtime_context_t *ctx)
@@ -460,6 +522,30 @@ void forth_2over(forth_runtime_context_t *ctx)
     
     forth_PUSH(ctx, x);
     forth_PUSH(ctx, y);
+}
+
+// 2ROT ( x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2 )
+void forth_2rot(forth_runtime_context_t *ctx)
+{
+	// In this system 2 CS-ROLL has the correct semantics....
+	forth_PUSH(ctx, 2);
+	forth_csroll(ctx);
+}
+
+// 2@ ( addr - x y )
+void forth_2fetch(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *p = (forth_cell_t *)forth_POP(ctx);
+	forth_PUSH(ctx, p[1]);
+	forth_PUSH(ctx, p[0]);
+}
+
+// 2! ( x y addr - )
+void forth_2store(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *p = (forth_cell_t *)forth_POP(ctx);
+	p[0] = forth_POP(ctx);
+	p[1] = forth_POP(ctx);
 }
 // ---------------------------------------------------------------------------------------------------------------
 //                                                  Arithmetics
@@ -2360,6 +2446,7 @@ DEF_FORTH_WORD("(",  FORTH_XT_FLAGS_IMMEDIATE, forth_paren,         "( -- )"),
 DEF_FORTH_WORD(".(", FORTH_XT_FLAGS_IMMEDIATE, forth_dot_paren,     "( -- )"),
 
 DEF_FORTH_WORD("dup",        0, forth_dup,           "( x -- x x )"),
+DEF_FORTH_WORD("?dup",       0, forth_question_dup,  "( 0 | x -- 0 | x x )"),
 DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- )"),
 DEF_FORTH_WORD("nip",        0, forth_nip,           "( x y -- y )"),
 DEF_FORTH_WORD("tuck",       0, forth_tuck,          "( x y -- y x y)"),
@@ -2371,13 +2458,17 @@ DEF_FORTH_WORD("swap",       0, forth_swap,          "( x y -- y x )"),
 DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),
 DEF_FORTH_WORD("@",          0, forth_fetch,         "( addr -- val )"),
 DEF_FORTH_WORD("!",          0, forth_store,         "( val addr -- )"),
+DEF_FORTH_WORD("+!",         0, forth_plus_store,    "( val addr -- )"),
 DEF_FORTH_WORD("?",          0, forth_questionmark,  "( addr -- )"),
 DEF_FORTH_WORD("c@",         0, forth_cfetch,        "( addr -- char )"),
 DEF_FORTH_WORD("c!",         0, forth_cstore,        "( char addr -- )"),
+DEF_FORTH_WORD("2@",         0, forth_2fetch,        "( addr -- x y )"),
+DEF_FORTH_WORD("2!",         0, forth_2store,        "( x y addr -- )"),
 DEF_FORTH_WORD("2dup",       0, forth_2dup,          "( x y -- x y x y )"),
 DEF_FORTH_WORD("2drop",      0, forth_2drop,         "( x y -- )"),
 DEF_FORTH_WORD("2swap",      0, forth_2swap,         "( x y a b -- a b x y )"),
 DEF_FORTH_WORD("2over",      0, forth_2over,         "( x y a b -- x y a b x y )"),
+DEF_FORTH_WORD("2rot",       0, forth_2rot,         "( x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2 )"),
 DEF_FORTH_WORD("+",          0, forth_add,           "( x y -- x+y )"),
 DEF_FORTH_WORD("-",          0, forth_subtract,      "( x y -- x-y )"),
 DEF_FORTH_WORD("*",          0, forth_multiply,      "( x y -- x*y )"),
@@ -2389,10 +2480,18 @@ DEF_FORTH_WORD("xor",        0, forth_xor,           "( x y -- x^y )"),
 DEF_FORTH_WORD("invert",     0, forth_invert,        "( x -- ~x )"),
 DEF_FORTH_WORD("negate",     0, forth_negate,        "( x -- -x )"),
 DEF_FORTH_WORD("abs",     	 0, forth_abs,        	 "( x -- |x| )"),
+DEF_FORTH_WORD("2*",     	 0, forth_2mul,        	 "( x -- x*2 )"),
+DEF_FORTH_WORD("2/",     	 0, forth_2div,        	 "( x -- x/2 )"),
+DEF_FORTH_WORD("1+",     	 0, forth_1plus,         "( x -- x+1 )"),
+DEF_FORTH_WORD("1-",     	 0, forth_1minus,        "( x -- x-1 )"),
+DEF_FORTH_WORD("char+",      0, forth_1plus,         "( x -- x+1 )"),
+DEF_FORTH_WORD("chars",      0, forth_noop,          "( x -- y )"),
+DEF_FORTH_WORD("cell+",      0, forth_cell_plus,     "( x -- y )"),
+DEF_FORTH_WORD("cells",      0, forth_cells,         "( x -- y )"),
 
-DEF_FORTH_WORD("erase",      0, forth_erase,          "( c-addr len -- )"),
-DEF_FORTH_WORD("fill",       0, forth_fill,           "( c-addr len char -- )"),
-DEF_FORTH_WORD("move",       0, forth_move,           "( src-addr dst-addr len -- )"),
+DEF_FORTH_WORD("erase",      0, forth_erase,         "( c-addr len -- )"),
+DEF_FORTH_WORD("fill",       0, forth_fill,          "( c-addr len char -- )"),
+DEF_FORTH_WORD("move",       0, forth_move,          "( src-addr dst-addr len -- )"),
 
 DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
 DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
