@@ -163,7 +163,7 @@ extern void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_execute(forth_runtime_context_t *ctx);
 extern void forth_trace_on(forth_runtime_context_t *ctx);
 extern void forth_trace_off(forth_runtime_context_t *ctx);
-extern void forth_paren_trace(forth_runtime_context_t *ctx); // (TRACE)
+extern void forth_paren_trace(forth_runtime_context_t *ctx); 		// (TRACE)
 extern void forth_catch(forth_runtime_context_t *ctx);
 extern void forth_throw(forth_runtime_context_t *ctx);
 extern void forth_abort(forth_runtime_context_t *ctx);
@@ -178,14 +178,14 @@ extern void forth_dots(forth_runtime_context_t *ctx);
 extern void forth_dot(forth_runtime_context_t *ctx);
 extern void forth_hdot(forth_runtime_context_t *ctx);
 extern void forth_udot(forth_runtime_context_t *ctx);
-extern void forth_dotr(forth_runtime_context_t *ctx);	// .R
-extern void forth_udotr(forth_runtime_context_t *ctx);	// U.R
+extern void forth_dotr(forth_runtime_context_t *ctx);				// .R
+extern void forth_udotr(forth_runtime_context_t *ctx);				// U.R
 
 extern void forth_key(forth_runtime_context_t *ctx);
-extern void forth_key_q(forth_runtime_context_t *ctx); // KEY?
+extern void forth_key_q(forth_runtime_context_t *ctx); 				// KEY?
 extern void forth_ekey(forth_runtime_context_t *ctx);
-extern void forth_ekey_q(forth_runtime_context_t *ctx); // EKEY?
-extern void forth_ekey2char(forth_runtime_context_t *ctx); // EKEY>CHAR
+extern void forth_ekey_q(forth_runtime_context_t *ctx); 			// EKEY?
+extern void forth_ekey2char(forth_runtime_context_t *ctx); 			// EKEY>CHAR
 extern void forth_accept(forth_runtime_context_t *ctx);
 extern void forth_refill(forth_runtime_context_t *ctx);
 extern void forth_space(forth_runtime_context_t *ctx);
@@ -202,8 +202,8 @@ extern void forth_dot_paren(forth_runtime_context_t *ctx);
 extern void forth_invert(forth_runtime_context_t *ctx);
 extern void forth_negate(forth_runtime_context_t *ctx);
 extern void forth_abs(forth_runtime_context_t *ctx);
-extern void forth_2mul(forth_runtime_context_t *ctx); // 2*
-extern void forth_2div(forth_runtime_context_t *ctx); // 2*
+extern void forth_2mul(forth_runtime_context_t *ctx); 				// 2*
+extern void forth_2div(forth_runtime_context_t *ctx); 				// 2*
 extern void forth_depth(forth_runtime_context_t *ctx);
 extern void forth_dup(forth_runtime_context_t *ctx);
 extern void forth_question_dup(forth_runtime_context_t *ctx);
@@ -211,30 +211,30 @@ extern void forth_drop(forth_runtime_context_t *ctx);
 extern void forth_nip(forth_runtime_context_t *ctx);
 extern void forth_tuck(forth_runtime_context_t *ctx);
 extern void forth_rot(forth_runtime_context_t *ctx);
-extern void forth_mrot(forth_runtime_context_t *ctx); // -ROT
+extern void forth_mrot(forth_runtime_context_t *ctx); 				// -ROT
 extern void forth_roll(forth_runtime_context_t *ctx);
 extern void forth_pick(forth_runtime_context_t *ctx);
 extern void forth_cspick(forth_runtime_context_t *ctx);
 extern void forth_csroll(forth_runtime_context_t *ctx);
 extern void forth_swap(forth_runtime_context_t *ctx);
 extern void forth_over(forth_runtime_context_t *ctx);
-extern void forth_fetch(forth_runtime_context_t *ctx); // @
-extern void forth_store(forth_runtime_context_t *ctx); // !
-extern void forth_plus_store(forth_runtime_context_t *ctx); // +!
-extern void forth_1plus(forth_runtime_context_t *ctx);  // 1+
-extern void forth_1minus(forth_runtime_context_t *ctx); // 1-
-extern void forth_cell_plus(forth_runtime_context_t *ctx); // CELL+
-extern void forth_cells(forth_runtime_context_t *ctx);     // CELLS
-extern void forth_cfetch(forth_runtime_context_t *ctx); // C@
-extern void forth_cstore(forth_runtime_context_t *ctx); // C!
-extern void forth_questionmark(forth_runtime_context_t *ctx); // ?
+extern void forth_fetch(forth_runtime_context_t *ctx); 				// @
+extern void forth_store(forth_runtime_context_t *ctx); 				// !
+extern void forth_plus_store(forth_runtime_context_t *ctx); 		// +!
+extern void forth_1plus(forth_runtime_context_t *ctx);  			// 1+
+extern void forth_1minus(forth_runtime_context_t *ctx); 			// 1-
+extern void forth_cell_plus(forth_runtime_context_t *ctx); 			// CELL+
+extern void forth_cells(forth_runtime_context_t *ctx);     			// CELLS
+extern void forth_cfetch(forth_runtime_context_t *ctx); 			// C@
+extern void forth_cstore(forth_runtime_context_t *ctx); 			// C!
+extern void forth_questionmark(forth_runtime_context_t *ctx); 		// ?
 extern void forth_2drop(forth_runtime_context_t *ctx);
 extern void forth_2swap(forth_runtime_context_t *ctx);
 extern void forth_2dup(forth_runtime_context_t *ctx);
 extern void forth_2over(forth_runtime_context_t *ctx);
 extern void forth_2rot(forth_runtime_context_t *ctx);
-extern void forth_2fetch(forth_runtime_context_t *ctx); // 2@
-extern void forth_2store(forth_runtime_context_t *ctx); // 2!
+extern void forth_2fetch(forth_runtime_context_t *ctx); 			// 2@
+extern void forth_2store(forth_runtime_context_t *ctx); 			// 2!
 extern void forth_add(forth_runtime_context_t *ctx);
 extern void forth_subtract(forth_runtime_context_t *ctx);
 extern void forth_multiply(forth_runtime_context_t *ctx);
@@ -243,18 +243,29 @@ extern void forth_mod(forth_runtime_context_t *ctx);
 extern void forth_and(forth_runtime_context_t *ctx);
 extern void forth_or(forth_runtime_context_t *ctx);
 extern void forth_xor(forth_runtime_context_t *ctx);
-
+extern void forth_equals(forth_runtime_context_t *ctx);				// =
+extern void forth_not_equals(forth_runtime_context_t *ctx);			// <>
+extern void forth_zero_equals(forth_runtime_context_t *ctx);		// 0=
+extern void forth_zero_not_equals(forth_runtime_context_t *ctx);	// 0<>
+extern void forth_uless(forth_runtime_context_t *ctx);				// U<
+extern void forth_ugreater(forth_runtime_context_t *ctx);			// U>
+extern void forth_less(forth_runtime_context_t *ctx);				// <
+extern void forth_greater(forth_runtime_context_t *ctx);			// >
+extern void forth_zero_less(forth_runtime_context_t *ctx);			// 0<
+extern void forth_zero_greater(forth_runtime_context_t *ctx);		// 0>
 extern void forth_fill(forth_runtime_context_t *ctx);
 extern void forth_erase(forth_runtime_context_t *ctx);
+extern void forth_blank(forth_runtime_context_t *ctx);
 extern void forth_move(forth_runtime_context_t *ctx);
+extern void forth_compare(forth_runtime_context_t *ctx);
 
 extern void forth_find_name(struct forth_runtime_context *ctx);
 extern void forth_bracket_defined(forth_runtime_context_t *ctx);
 extern void forth_bracket_undefined(forth_runtime_context_t *ctx);
-extern void forth_tick(forth_runtime_context_t *ctx);			// '
-extern void forth_bracket_tick(forth_runtime_context_t *ctx);	// [']
-extern void forth_char(forth_runtime_context_t *ctx);			// CHAR
-extern void forth_bracket_char(forth_runtime_context_t *ctx);	// [CHAR]
+extern void forth_tick(forth_runtime_context_t *ctx);				// '
+extern void forth_bracket_tick(forth_runtime_context_t *ctx);		// [']
+extern void forth_char(forth_runtime_context_t *ctx);				// CHAR
+extern void forth_bracket_char(forth_runtime_context_t *ctx);		// [CHAR]
 
 extern void forth_evaluate(forth_runtime_context_t *ctx);
 extern void forth_words(forth_runtime_context_t *ctx);
@@ -266,7 +277,7 @@ extern void forth_decimal(forth_runtime_context_t *ctx);
 extern void forth_hex(forth_runtime_context_t *ctx);
 extern void forth_base(forth_runtime_context_t *ctx);
 extern void forth_state(forth_runtime_context_t *ctx);
-extern void forth_to_in(forth_runtime_context_t *ctx); // >IN
+extern void forth_to_in(forth_runtime_context_t *ctx); 				// >IN
 extern void forth_left_bracket(forth_runtime_context_t *ctx);
 extern void forth_right_bracket(forth_runtime_context_t *ctx);
 
@@ -275,8 +286,8 @@ extern void forth_unused(forth_runtime_context_t *ctx);
 extern void forth_align(forth_runtime_context_t *ctx);
 extern void forth_aligned(forth_runtime_context_t *ctx);
 extern void forth_allot(forth_runtime_context_t *ctx);
-extern void forth_c_comma(forth_runtime_context_t *ctx); // C,
-extern void forth_comma(forth_runtime_context_t *ctx);	 // ,
+extern void forth_c_comma(forth_runtime_context_t *ctx); 			// C,
+extern void forth_comma(forth_runtime_context_t *ctx);	 			// ,
 extern void forth_literal(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);

@@ -621,6 +621,83 @@ void forth_xor(forth_runtime_context_t *ctx)
     forth_cell_t x = forth_POP(ctx);
     forth_PUSH(ctx, x^y);
 }
+
+// = ( x y -- flag )
+void forth_equals(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, (x == y) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// <> ( x y -- flag )
+void forth_not_equals(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, (x != y) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// u< ( x y -- flag )
+void forth_uless(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, (x < y) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// u> ( x y -- flag )
+void forth_ugreater(forth_runtime_context_t *ctx)
+{
+	forth_cell_t y = forth_POP(ctx);
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, (x > y) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// < ( x y -- flag )
+void forth_less(forth_runtime_context_t *ctx)
+{
+	forth_scell_t y = (forth_scell_t)forth_POP(ctx);
+	forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+	forth_PUSH(ctx, (x < y) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// > ( x y -- flag )
+void forth_greater(forth_runtime_context_t *ctx)
+{
+	forth_scell_t y = (forth_scell_t)forth_POP(ctx);
+	forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+	forth_PUSH(ctx, (x > y) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// 0= ( x -- flag )
+void forth_zero_equals(forth_runtime_context_t *ctx)
+{
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, (0 == x) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// 0<> ( x -- flag )
+void forth_zero_not_equals(forth_runtime_context_t *ctx)
+{
+	forth_cell_t x = forth_POP(ctx);
+	forth_PUSH(ctx, (0 != x) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// 0< ( x -- flag )
+void forth_zero_less(forth_runtime_context_t *ctx)
+{
+	forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+	forth_PUSH(ctx, (x < 0) ? FORTH_TRUE: FORTH_FALSE);
+}
+
+// 0> ( x -- flag )
+void forth_zero_greater(forth_runtime_context_t *ctx)
+{
+	forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+	forth_PUSH(ctx, (x > 0) ? FORTH_TRUE: FORTH_FALSE);
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 //                                                  String/Memory Operations
 // ---------------------------------------------------------------------------------------------------------------
@@ -641,6 +718,13 @@ void forth_erase(forth_runtime_context_t *ctx)
 	forth_fill(ctx);
 }
 
+// BLANK ( c-addr len -- )
+void forth_blank(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, FORTH_CHAR_SPACE);
+	forth_fill(ctx);
+}
+
 // MOVE ( src dest len -- )
 void forth_move(forth_runtime_context_t *ctx)
 {
@@ -652,6 +736,47 @@ void forth_move(forth_runtime_context_t *ctx)
 	{
 		(void)memmove(dst_addr, src_addr, (size_t)len);
 	}
+}
+
+forth_scell_t forth_COMPARE_STRINGS(const char *s1, forth_cell_t len1, const char *s2, forth_cell_t len2)
+{
+	// forth_scell_t diff;
+
+	while(1)
+	{
+		if ((0 == len1) && (0 == len2))	// No characters left -- the strings are the same.
+		{
+			return 0;
+		}
+		else if (0 == len1) // Only the first string has ended
+		{
+			return -1;
+		}
+		else if (0 == len2) // Only the second string has ended
+		{
+			return 1;
+		}
+
+		if (*s1 != *s2)
+		{
+			return (0 > ( ((signed char)*s1) - ((signed char)*s2) )) ? -1 : 1;
+		}
+
+		len1--;
+		s1++;
+		len2--;
+		s2++;
+	}
+}
+
+// COMPARE ( c-addr1 u1 c-addr2 u2 -- n )
+void forth_compare(forth_runtime_context_t *ctx)
+{
+	forth_cell_t len2 = forth_POP(ctx);
+	const char *s2 = (const char *)forth_POP(ctx);
+	forth_cell_t len1 = forth_POP(ctx);
+	const char *s1 = (const char *)forth_POP(ctx);
+	forth_PUSH(ctx, (forth_cell_t)forth_COMPARE_STRINGS(s1, len1, s2, len2));
 }
 // ---------------------------------------------------------------------------------------------------------------
 //                                                  Terminal I/O
@@ -2477,6 +2602,19 @@ DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
 DEF_FORTH_WORD("and",        0, forth_and,           "( x y -- x&y )"),
 DEF_FORTH_WORD("or",         0, forth_or,            "( x y -- x|y )"),
 DEF_FORTH_WORD("xor",        0, forth_xor,           "( x y -- x^y )"),
+
+DEF_FORTH_WORD("=",          0, forth_equals,        "( x y -- flag )"),
+DEF_FORTH_WORD("<>",         0, forth_not_equals,    "( x y -- flag )"),
+DEF_FORTH_WORD("u<",         0, forth_uless,    	 "( x y -- flag )"),
+DEF_FORTH_WORD("u>",         0, forth_ugreater,      "( x y -- flag )"),
+DEF_FORTH_WORD("<",          0, forth_less,    	     "( x y -- flag )"),
+DEF_FORTH_WORD(">",          0, forth_greater,       "( x y -- flag )"),
+
+DEF_FORTH_WORD("0=",         0, forth_zero_equals,    "( x -- flag )"),
+DEF_FORTH_WORD("0<>",        0, forth_zero_not_equals,"( x -- flag )"),
+DEF_FORTH_WORD("0<",         0, forth_zero_less,      "( x -- flag )"),
+DEF_FORTH_WORD("0>",         0, forth_zero_greater,  "( x -- flag )"),
+
 DEF_FORTH_WORD("invert",     0, forth_invert,        "( x -- ~x )"),
 DEF_FORTH_WORD("negate",     0, forth_negate,        "( x -- -x )"),
 DEF_FORTH_WORD("abs",     	 0, forth_abs,        	 "( x -- |x| )"),
@@ -2490,8 +2628,10 @@ DEF_FORTH_WORD("cell+",      0, forth_cell_plus,     "( x -- y )"),
 DEF_FORTH_WORD("cells",      0, forth_cells,         "( x -- y )"),
 
 DEF_FORTH_WORD("erase",      0, forth_erase,         "( c-addr len -- )"),
+DEF_FORTH_WORD("blank",      0, forth_blank,         "( c-addr len -- )"),
 DEF_FORTH_WORD("fill",       0, forth_fill,          "( c-addr len char -- )"),
 DEF_FORTH_WORD("move",       0, forth_move,          "( src-addr dst-addr len -- )"),
+DEF_FORTH_WORD("compare",	 0, forth_compare, 		 "( c-addr1 u1 c-addr2 u2 -- n )"),
 
 DEF_FORTH_WORD("1", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "One"),
 DEF_FORTH_WORD("0", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "Zero"),
