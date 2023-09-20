@@ -90,6 +90,11 @@ void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt)
         forth_THROW(ctx, -13); // Is there a better value to throw here???????
     }
 
+	if (ctx->trace)
+	{
+		forth_PRINT_TRACE(ctx, xt);
+	}
+
     switch((uint8_t)(xt->flags & FORTH_XT_FLAGS_ACTION_MASK))
 	{
 		case FORTH_XT_FLAGS_ACTION_PRIMITIVE:
@@ -120,6 +125,24 @@ void forth_execute(forth_runtime_context_t *ctx)
 {
     forth_xt_t xt = (forth_xt_t)forth_POP(ctx);
 	forth_EXECUTE(ctx, xt);
+}
+
+// (TRACE) ( -- addr )
+void forth_paren_trace(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t) &(ctx->trace));
+}
+
+// TRACE-ON ( -- )
+void forth_trace_on(forth_runtime_context_t *ctx)
+{
+	ctx->trace = FORTH_TRUE;
+}
+
+// TRACE-OFF ( -- )
+void forth_trace_off(forth_runtime_context_t *ctx)
+{
+	ctx->trace = FORTH_FALSE;
 }
 
 // ABORT ( -- )
@@ -934,6 +957,26 @@ int forth_DOTS(forth_runtime_context_t *ctx)
 }
 
 // -----------------------------------------------------------------
+void forth_PRINT_TRACE(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	if (0 != xt)
+	{
+		if (0 != xt->name)
+		{
+			if (0 > forth_HDOT(ctx, (forth_cell_t)(ctx->ip)))
+			{
+				forth_THROW(ctx, -57);
+			}
+
+			forth_TYPE0(ctx, ": ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_space(ctx);
+			forth_dots(ctx);
+			//forth_cr(ctx);
+		}
+	}
+}
+// -----------------------------------------------------------------
 // . ( x -- )
 void forth_dot(forth_runtime_context_t *ctx)
 {
@@ -1699,6 +1742,12 @@ void forth_base(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, (forth_cell_t) &(ctx->base));
 }
 
+// >IN ( -- addr )
+void forth_to_in(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t) &(ctx->to_in));
+}
+
 // STATE ( -- addr )
 void forth_state(forth_runtime_context_t *ctx)
 {
@@ -1739,7 +1788,7 @@ forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length)
 // Interpreter for threaded code.
 void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
-	forth_xt_t *saved_ip = ctx->ip;
+	forth_xt_t *caller_ip = ctx->ip;
 
 	ctx->ip = (forth_xt_t *) &(xt->meaning);
 
@@ -1748,7 +1797,7 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 		forth_EXECUTE(ctx, *(ctx->ip++));
 	}
 
-	ctx->ip = saved_ip;
+	ctx->ip = caller_ip;
 }
 
 // Details of how constants are implemented.
@@ -2142,7 +2191,7 @@ void forth_words(forth_runtime_context_t *ctx)
 
 // [DEFINED] ( "name" -- flag )
 // True means the word is defined.
-void forth_defined(forth_runtime_context_t *ctx)
+void forth_bracket_defined(forth_runtime_context_t *ctx)
 {
     forth_parse_name(ctx);
     forth_find_name(ctx);
@@ -2152,7 +2201,7 @@ void forth_defined(forth_runtime_context_t *ctx)
 
 // [UNDEFINED] ( "name" --  flag )
 // True means the word is not defined.
-void forth_undefined(forth_runtime_context_t *ctx)
+void forth_bracket_undefined(forth_runtime_context_t *ctx)
 {
     forth_parse_name(ctx);
     forth_find_name(ctx);
@@ -2168,6 +2217,42 @@ void forth_tick(forth_runtime_context_t *ctx)
     {
         forth_THROW(ctx, -13);
     }
+}
+
+// ['] Compile: ( "name" -- ) Execute: ( -- xt )
+void forth_bracket_tick(forth_runtime_context_t *ctx)
+{
+    forth_parse_name(ctx);
+    forth_find_name(ctx);
+
+    if (0 == ctx->sp[0])
+    {
+        forth_THROW(ctx, -13);
+    }
+
+	forth_literal(ctx);
+}
+
+// CHAR ( "c" -- char )
+void forth_char(forth_runtime_context_t *ctx)
+{
+	const char *p;
+
+	forth_parse_name(ctx);
+	if (0 == forth_POP(ctx))
+	{
+		forth_THROW(ctx, -18); // Parsed string overflow. (Not sure what is appropriate here.??)
+	}
+
+	p = (const char *)(ctx->sp[0]);
+	ctx->sp[0] = (forth_cell_t)*p;
+}
+
+// [CHAR] Compile ( "char" -- ) Execution ( -- char )
+void forth_bracket_char(forth_runtime_context_t *ctx)
+{
+	forth_char(ctx);
+	forth_literal(ctx);
 }
 
 const forth_vocabulary_entry_t forth_wl_forth[] =
@@ -2231,12 +2316,16 @@ DEF_FORTH_WORD("ekey>char",  0, forth_ekey2char,     "( key-event -- key-event f
 DEF_FORTH_WORD("accept",     0, forth_accept,        "( c-addr len1 -- len2 )"),
 DEF_FORTH_WORD("refill",     0, forth_refill,        "( -- flag )"),
 
+DEF_FORTH_WORD(">in",      	 0, forth_to_in,      	 "( -- addr )"),
 DEF_FORTH_WORD("parse",      0, forth_parse,         "( char -- c-addr len )"),
 DEF_FORTH_WORD("\"",         0, forth_quot,          "( <string> -- c-addr len )"),
 DEF_FORTH_WORD("s\"", FORTH_XT_FLAGS_IMMEDIATE, forth_squot, "( <string> -- c-addr len )"),
 DEF_FORTH_WORD("parse-name", 0, forth_parse_name,    "( \"name\" -- c-addr len )"),
 DEF_FORTH_WORD("find-name",  0, forth_find_name,     "( c-addr len -- xt|0)"),
+DEF_FORTH_WORD("[']",FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_tick,  "C: ( \"name\" -- ) R: ( -- xt )"),
 DEF_FORTH_WORD("'",          0, forth_tick,          "( \"name\" -- xt )"),
+DEF_FORTH_WORD("[char]", FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_char, "C:( \"c\" -- ) R: ( -- char )"),
+DEF_FORTH_WORD("char",       0, forth_char,          "( \"c\" -- char )"),
 
 DEF_FORTH_WORD(".error",     0, forth_print_error,   "( error_code -- )"),
 DEF_FORTH_WORD("noop",       0, forth_noop,          "( -- )"),
@@ -2258,6 +2347,7 @@ DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
 DEF_FORTH_WORD("literal",    0, forth_literal,       "( x --  )"),
 DEF_FORTH_WORD("2literal",   0, forth_2literal,      "( x y --  )"),
+DEF_FORTH_WORD("sliteral",   0, forth_sliteral,      "( c-addr count --  )"),
 DEF_FORTH_WORD(":",   		 0, forth_colon,         "( \"name\" -- colon-sys )"),
 DEF_FORTH_WORD(";", FORTH_XT_FLAGS_IMMEDIATE, forth_semicolon, "( colon-sys -- )"),
 DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" --)"),
@@ -2275,10 +2365,12 @@ DEF_FORTH_WORD("evaluate",   0, forth_evaluate,		 "( c-addr len -- )"),
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
 DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
-DEF_FORTH_WORD( "bye",        0, forth_bye,          "( -- )"),
-DEF_FORTH_WORD("[defined]", FORTH_XT_FLAGS_IMMEDIATE, forth_defined, "( \"name\" -- flag )"),
-DEF_FORTH_WORD("[undefined]", FORTH_XT_FLAGS_IMMEDIATE, forth_undefined, "( \"name\" -- flag )"),
-
+DEF_FORTH_WORD( "bye",       0, forth_bye,           "( -- )"),
+DEF_FORTH_WORD("[defined]",   FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_defined, "( \"name\" -- flag )"),
+DEF_FORTH_WORD("[undefined]", FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_undefined, "( \"name\" -- flag )"),
+DEF_FORTH_WORD( "trace-on",  0, forth_trace_on,      "( -- )"),
+DEF_FORTH_WORD( "trace-off", 0, forth_trace_off,     "( -- )"),
+DEF_FORTH_WORD( "(trace)",   0, forth_paren_trace,   "( -- adr )"),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 

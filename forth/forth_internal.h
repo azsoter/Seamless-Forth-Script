@@ -137,6 +137,7 @@ extern const forth_xt_t forth_SLIT_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
+extern void forth_PRINT_TRACE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx);
@@ -160,6 +161,9 @@ extern void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt);
 
 // Primitives
 extern void forth_execute(forth_runtime_context_t *ctx);
+extern void forth_trace_on(forth_runtime_context_t *ctx);
+extern void forth_trace_off(forth_runtime_context_t *ctx);
+extern void forth_paren_trace(forth_runtime_context_t *ctx); // (TRACE)
 extern void forth_catch(forth_runtime_context_t *ctx);
 extern void forth_throw(forth_runtime_context_t *ctx);
 extern void forth_abort(forth_runtime_context_t *ctx);
@@ -228,9 +232,12 @@ extern void forth_or(forth_runtime_context_t *ctx);
 extern void forth_xor(forth_runtime_context_t *ctx);
 
 extern void forth_find_name(struct forth_runtime_context *ctx);
-extern void forth_defined(forth_runtime_context_t *ctx);
-extern void forth_undefined(forth_runtime_context_t *ctx);
-extern void forth_tick(forth_runtime_context_t *ctx);
+extern void forth_bracket_defined(forth_runtime_context_t *ctx);
+extern void forth_bracket_undefined(forth_runtime_context_t *ctx);
+extern void forth_tick(forth_runtime_context_t *ctx);			// '
+extern void forth_bracket_tick(forth_runtime_context_t *ctx);	// [']
+extern void forth_char(forth_runtime_context_t *ctx);			// CHAR
+extern void forth_bracket_char(forth_runtime_context_t *ctx);	// [CHAR]
 
 extern void forth_evaluate(forth_runtime_context_t *ctx);
 extern void forth_words(forth_runtime_context_t *ctx);
@@ -242,6 +249,7 @@ extern void forth_decimal(forth_runtime_context_t *ctx);
 extern void forth_hex(forth_runtime_context_t *ctx);
 extern void forth_base(forth_runtime_context_t *ctx);
 extern void forth_state(forth_runtime_context_t *ctx);
+extern void forth_to_in(forth_runtime_context_t *ctx); // >IN
 extern void forth_left_bracket(forth_runtime_context_t *ctx);
 extern void forth_right_bracket(forth_runtime_context_t *ctx);
 
