@@ -2243,16 +2243,47 @@ forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length)
 	dict->dp_max = length;
 }
 
+// BRANCH ( -- ) Compiled by some words such as ELSE and REPEAT.
+void forth_branch(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+
+	ctx->ip += (forth_cell_t)(ctx->ip[0]);
+}
+
+// 0BRACH ( flag -- ) Compiled by IF, WHILE, UNTIL, etc.
+void forth_0branch(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+
+	if (0 == forth_POP(ctx))
+	{
+		ctx->ip += (forth_cell_t)(ctx->ip[0]);
+	}
+	else
+	{
+		ctx->ip++;
+	}
+}
+
 // Interpreter for threaded code.
 void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
 	forth_xt_t *caller_ip = ctx->ip;
+	forth_xt_t x;
 
 	ctx->ip = (forth_xt_t *) &(xt->meaning);
 
 	while (0 != *(ctx->ip))
 	{
-		forth_EXECUTE(ctx, *(ctx->ip++));
+		x = *(ctx->ip++);
+		forth_EXECUTE(ctx, x);
 	}
 
 	ctx->ip = caller_ip;
@@ -2442,6 +2473,41 @@ void forth_comma(forth_runtime_context_t *ctx)
 	forth_COMMA(ctx, x);
 }
 
+// IF ( flag -- ) C: ( -- orig )
+void forth_if(forth_runtime_context_t *ctx)
+{
+	forth_COMPILE_COMMA(ctx , forth_0BRANCH_xt);
+	forth_here(ctx);
+	forth_COMMA(ctx, 0);
+	forth_PUSH(ctx, FORTH_ORIG_MARKER);
+}
+
+// THEN ( -- ) C: ( orig -- )
+void forth_then(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *p;
+
+	if (FORTH_ORIG_MARKER != forth_POP(ctx))
+	{
+		forth_THROW(ctx, -22); // Control structure mismatch.
+	}
+
+	p = (forth_cell_t *)forth_POP(ctx);
+	forth_here(ctx);
+	*p = ((forth_cell_t *)forth_POP(ctx)) - p;
+}
+
+// ELSE ( -- ) C: ( orig1 -- orig2 )
+void forth_else(forth_runtime_context_t *ctx)
+{
+	forth_COMPILE_COMMA(ctx , forth_BRANCH_xt);
+	forth_here(ctx);
+	forth_COMMA(ctx, 0);
+	forth_mrot(ctx);
+	forth_then(ctx);
+	forth_PUSH(ctx, FORTH_ORIG_MARKER);
+}
+
 forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx)
 {
 	const char *name;
@@ -2606,6 +2672,18 @@ void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 			tmp = ((forth_cell_t)(ip + 1)) + len; // Only + 1 (not 2) because the for() auto increments ip.
 			tmp = FORTH_ALIGN(tmp);
 			ip = (forth_cell_t *)tmp;
+		}
+		else if ((forth_BRANCH_xt == x) || (forth_0BRANCH_xt == x))
+		{
+			tmp = ip[1];
+			ip += 1;
+			forth_TYPE0(ctx, " [ ' ");
+			forth_TYPE0(ctx, (const char *)x->name);
+			forth_TYPE0(ctx, " COMPILE, ");
+			forth_PUSH(ctx, tmp);
+			forth_dot(ctx);
+			forth_TYPE0(ctx, ", ] ");
+			forth_space(ctx);
 		}
 		else
 		{
@@ -2950,6 +3028,11 @@ DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
 DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
 DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
+
+DEF_FORTH_WORD("if",   FORTH_XT_FLAGS_IMMEDIATE, forth_if,   "( flag -- )"),
+DEF_FORTH_WORD("else", FORTH_XT_FLAGS_IMMEDIATE, forth_else, "( -- )"),
+DEF_FORTH_WORD("then", FORTH_XT_FLAGS_IMMEDIATE, forth_then, "( -- )"),
+
 DEF_FORTH_WORD("literal",    0, forth_literal,       "( x --  )"),
 DEF_FORTH_WORD("2literal",   0, forth_2literal,      "( x y --  )"),
 DEF_FORTH_WORD("sliteral",   0, forth_sliteral,      "( c-addr count --  )"),
@@ -2993,6 +3076,8 @@ const forth_vocabulary_entry_t forth_wl_system[] =
 DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
 DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),
 DEF_FORTH_WORD("SLIT",       0, forth_slit,          "( -- c-addr len )" ),
+DEF_FORTH_WORD("BRANCH",	 0, forth_branch,		 " ( -- )"),
+DEF_FORTH_WORD("0BRANCH",	 0, forth_0branch,		 " ( flag -- )"),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
@@ -3001,6 +3086,8 @@ DEF_FORTH_WORD(0, 0, 0, 0)
 const forth_xt_t forth_interpret_xt = (const forth_xt_t)&(forth_wl_system[0]);
 const forth_xt_t forth_LIT_xt = (const forth_xt_t)&(forth_wl_system[1]);
 const forth_xt_t forth_SLIT_xt = (const forth_xt_t)&(forth_wl_system[2]);
+const forth_xt_t forth_BRANCH_xt = (const forth_xt_t)&(forth_wl_system[3]);
+const forth_xt_t forth_0BRANCH_xt = (const forth_xt_t)&(forth_wl_system[4]);
 // -----------------------------------------------------------------------------------------------
 
 // Interpret the text in CMD.

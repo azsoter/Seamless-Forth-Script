@@ -126,7 +126,9 @@ struct forth_runtime_context
 #endif
 };
 
-#define FORTH_COLON_SYS_MARKER 0x4e4c4f43
+#define FORTH_COLON_SYS_MARKER	0x4e4c4f43
+#define FORTH_DEST_MARKER 		0x54534544
+#define FORTH_ORIG_MARKER		0x4749524F
 
 extern const forth_vocabulary_entry_t forth_wl_forth[];
 extern const forth_vocabulary_entry_t forth_wl_system[];
@@ -134,6 +136,8 @@ extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_xt_t forth_interpret_xt;
 extern const forth_xt_t forth_LIT_xt;
 extern const forth_xt_t forth_SLIT_xt;
+extern const forth_xt_t forth_BRANCH_xt;
+extern const forth_xt_t forth_0BRANCH_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
@@ -305,6 +309,9 @@ extern void forth_aligned(forth_runtime_context_t *ctx);
 extern void forth_allot(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); 			// C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 			// ,
+extern void forth_if(forth_runtime_context_t *ctx);					// IF
+extern void forth_else(forth_runtime_context_t *ctx);				// ELSE
+extern void forth_then(forth_runtime_context_t *ctx);				// THEN
 extern void forth_literal(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);
