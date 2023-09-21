@@ -235,6 +235,30 @@ forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt)
     return res;
 }
 
+// SP@ ( -- sp )
+void forth_sp_fetch(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t)(ctx->sp));
+}
+
+// SP0 ( -- sp0 )
+void forth_sp0(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t)(ctx->sp0));
+}
+
+// RP@ ( -- rp )
+void forth_rp_fetch(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t)(ctx->rp));
+}
+
+// RP0 ( -- rp0 )
+void forth_rp0(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t)(ctx->rp0));
+}
+
 // DEPTH ( -- depth )
 void forth_depth(forth_runtime_context_t *ctx)
 {
@@ -1892,7 +1916,7 @@ void forth_interpret(forth_runtime_context_t *ctx)
             // forth_dots(ctx);
             if (0 > res)
             {
-                forth_THROW(ctx, -13);
+                forth_THROW(ctx, -13); // Undefined word.
             }
 
 			if (0 == ctx->state)
@@ -2142,7 +2166,11 @@ void forth_quit(forth_runtime_context_t *ctx)
             break;
         }
 
-        forth_RUN_INTERPRET(ctx);
+        if (0 != forth_RUN_INTERPRET(ctx))
+		{
+			ctx->sp = ctx->sp0;
+			ctx->rp = ctx->rp0;
+		}
     }
 
     forth_bye(ctx);
@@ -2542,6 +2570,105 @@ void forth_semicolon(forth_runtime_context_t *ctx)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+void forth_PRINT_NAME(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+		forth_TYPE0(ctx, (const char *)(xt->name));
+		forth_space(ctx);
+}
+
+void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_cell_t *ip; // = &(xt->meaning);
+	forth_xt_t x;
+	forth_cell_t len;
+	forth_cell_t tmp;
+
+	forth_TYPE0(ctx, ": ");
+	//forth_TYPE0(ctx, (const char *)(xt->name));
+	forth_PRINT_NAME(ctx, xt);
+	for (ip = &(xt->meaning); 0 != *ip; ip++)
+	{
+		x = *((forth_xt_t *)ip);
+
+		if (forth_LIT_xt == x)
+		{
+			forth_PUSH(ctx, *++ip);
+			forth_dot(ctx);
+		}
+		else if (forth_SLIT_xt == x)
+		{
+			len = ip[1];
+			forth_PUSH(ctx, (forth_cell_t)(ip + 2));
+			forth_PUSH(ctx, len);
+			forth_TYPE0(ctx, "s\" ");
+			forth_type(ctx);
+			forth_TYPE0(ctx, "\" ");
+			tmp = ((forth_cell_t)(ip + 1)) + len; // Only + 1 (not 2) because the for() auto increments ip.
+			tmp = FORTH_ALIGN(tmp);
+			ip = (forth_cell_t *)tmp;
+		}
+		else
+		{
+			forth_PRINT_NAME(ctx, x);
+		}
+	}
+	forth_TYPE0(ctx, " ;");
+	forth_cr(ctx);
+}
+
+// SEE ( "name" -- )
+void forth_see(forth_runtime_context_t *ctx)
+{
+	forth_xt_t xt;
+	forth_tick(ctx);
+	xt = (forth_xt_t)forth_POP(ctx);
+	switch(xt->flags & FORTH_XT_FLAGS_ACTION_MASK)
+	{
+		case FORTH_XT_FLAGS_ACTION_PRIMITIVE:
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_TYPE0(ctx, " is a primitive.");
+			forth_cr(ctx);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_CONSTANT:
+			forth_PUSH(ctx, xt->meaning);
+			forth_hdot(ctx);
+			forth_TYPE0(ctx, "CONSTANT ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_cr(ctx);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_VARIABLE:
+			forth_TYPE0(ctx, "VARIABLE ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_cr(ctx);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_DEFER:
+			forth_TYPE0(ctx, "DEFER ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_cr(ctx);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_THREADED:
+			forth_SEE_THREADED(ctx, xt);
+			/*
+			forth_TYPE0(ctx, ": ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_TYPE0(ctx, " .......... ;");
+			forth_cr(ctx);
+			*/
+			break;
+
+		default:
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_TYPE0(ctx, " ?????");
+			forth_cr(ctx);
+			break;
+	}
+	
+}
+
 // HELP ( -- )
 void forth_help(forth_runtime_context_t *ctx)
 {
@@ -2842,6 +2969,7 @@ DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
 DEF_FORTH_WORD("evaluate",   0, forth_evaluate,		 "( c-addr len -- )"),
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
+DEF_FORTH_WORD("see",        0, forth_see,           "( \"name\"-- )"),
 DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
 DEF_FORTH_WORD( "bye",       0, forth_bye,           "( -- )"),
 DEF_FORTH_WORD("[defined]",   FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_defined, "( \"name\" -- flag )"),
@@ -2849,6 +2977,10 @@ DEF_FORTH_WORD("[undefined]", FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_undefined,
 DEF_FORTH_WORD( "trace-on",  0, forth_trace_on,      "( -- )"),
 DEF_FORTH_WORD( "trace-off", 0, forth_trace_off,     "( -- )"),
 DEF_FORTH_WORD( "(trace)",   0, forth_paren_trace,   "( -- adr )"),
+DEF_FORTH_WORD( "sp@",  	 0, forth_sp_fetch,      "( -- sp )"),
+DEF_FORTH_WORD( "sp0",  	 0, forth_sp0,      	 "( -- sp0 )"),
+DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
+DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 

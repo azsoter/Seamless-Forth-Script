@@ -204,6 +204,10 @@ extern void forth_negate(forth_runtime_context_t *ctx);
 extern void forth_abs(forth_runtime_context_t *ctx);
 extern void forth_2mul(forth_runtime_context_t *ctx); 				// 2*
 extern void forth_2div(forth_runtime_context_t *ctx); 				// 2*
+extern void forth_sp_fetch(forth_runtime_context_t *ctx);			// SP@
+extern void forth_sp0(forth_runtime_context_t *ctx);				// SP0
+extern void forth_rp_fetch(forth_runtime_context_t *ctx);			// RP@
+extern void forth_rp0(forth_runtime_context_t *ctx);				// RP0
 extern void forth_depth(forth_runtime_context_t *ctx);
 extern void forth_dup(forth_runtime_context_t *ctx);
 extern void forth_question_dup(forth_runtime_context_t *ctx);
@@ -281,6 +285,7 @@ extern void forth_bracket_char(forth_runtime_context_t *ctx);		// [CHAR]
 
 extern void forth_evaluate(forth_runtime_context_t *ctx);
 extern void forth_words(forth_runtime_context_t *ctx);
+extern void forth_see(forth_runtime_context_t *ctx);
 extern void forth_help(forth_runtime_context_t *ctx);
 extern void forth_quit(forth_runtime_context_t *ctx);
 
