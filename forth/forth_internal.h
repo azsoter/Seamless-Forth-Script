@@ -76,7 +76,8 @@ struct forth_runtime_context
 	forth_cell_t	*rp_min;
 	forth_cell_t	*rp0;
 	forth_cell_t	*rp;
-	forth_xt_t		*ip;
+	// forth_xt_t		*ip;
+	forth_cell_t		*ip;
 	forth_cell_t	base;	// Numeric base.
 	forth_cell_t	state;
 	forth_cell_t	throw_handler;
@@ -307,11 +308,20 @@ extern void forth_unused(forth_runtime_context_t *ctx);
 extern void forth_align(forth_runtime_context_t *ctx);
 extern void forth_aligned(forth_runtime_context_t *ctx);
 extern void forth_allot(forth_runtime_context_t *ctx);
+extern void forth_count(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); 			// C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 			// ,
+
+extern void forth_ahead(forth_runtime_context_t *ctx);
 extern void forth_if(forth_runtime_context_t *ctx);					// IF
 extern void forth_else(forth_runtime_context_t *ctx);				// ELSE
 extern void forth_then(forth_runtime_context_t *ctx);				// THEN
+extern void forth_begin(forth_runtime_context_t *ctx);
+extern void forth_again(forth_runtime_context_t *ctx);
+extern void forth_until(forth_runtime_context_t *ctx);
+extern void forth_while(forth_runtime_context_t *ctx);
+extern void forth_repeat(forth_runtime_context_t *ctx);
+
 extern void forth_literal(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);
