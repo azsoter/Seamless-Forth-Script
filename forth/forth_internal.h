@@ -259,9 +259,22 @@ extern void forth_2fetch(forth_runtime_context_t *ctx); 			// 2@
 extern void forth_2store(forth_runtime_context_t *ctx); 			// 2!
 
 #if !defined(FORTH_NO_DOUBLES)
+extern void forth_dzero_less(forth_runtime_context_t *ctx);			// D0<
+extern void forth_dzero_equals(forth_runtime_context_t *ctx);		// D0=
+extern void forth_dless(forth_runtime_context_t *ctx);				// D<
+extern void forth_duless(forth_runtime_context_t *ctx);				// DU<
+extern void forth_dequals(forth_runtime_context_t *ctx);			// D=
 extern void forth_dnegate(forth_runtime_context_t *ctx);
 extern void forth_dabs(forth_runtime_context_t *ctx);
-extern void forth_ddot(forth_runtime_context_t *ctx);
+extern void forth_dplus(forth_runtime_context_t *ctx);				// D+
+extern void forth_dminus(forth_runtime_context_t *ctx);				// D-
+extern void forth_s_to_d(forth_runtime_context_t *ctx);				// S>D
+extern void forth_mplus(forth_runtime_context_t *ctx);				// M+
+extern void forth_dmin(forth_runtime_context_t *ctx);				// DMIN
+extern void forth_dmax(forth_runtime_context_t *ctx);				// DMAX
+extern void forth_d2mul(forth_runtime_context_t *ctx);				// D2*
+extern void forth_d2div(forth_runtime_context_t *ctx);				// D2/
+extern void forth_ddot(forth_runtime_context_t *ctx);				// D.
 #endif
 
 extern void forth_to_r(forth_runtime_context_t *ctx);				// >R
@@ -277,7 +290,10 @@ extern void forth_add(forth_runtime_context_t *ctx);
 extern void forth_subtract(forth_runtime_context_t *ctx);
 extern void forth_multiply(forth_runtime_context_t *ctx);
 extern void forth_divide(forth_runtime_context_t *ctx);
-extern void forth_mod(forth_runtime_context_t *ctx);
+extern void forth_mod(forth_runtime_context_t *ctx);				// MOD
+extern void forth_div_mod(forth_runtime_context_t *ctx);			// /MOD
+extern void forth_mult_div_mod(forth_runtime_context_t *ctx);		// */MOD
+extern void forth_mult_div(forth_runtime_context_t *ctx);			// */
 extern void forth_min(forth_runtime_context_t *ctx);
 extern void forth_max(forth_runtime_context_t *ctx);
 extern void forth_and(forth_runtime_context_t *ctx);
@@ -319,6 +335,8 @@ extern void forth_hex(forth_runtime_context_t *ctx);
 extern void forth_base(forth_runtime_context_t *ctx);
 extern void forth_state(forth_runtime_context_t *ctx);
 extern void forth_to_in(forth_runtime_context_t *ctx); 				// >IN
+extern void forth_source(forth_runtime_context_t *ctx);				// SOURCE
+extern void forth_source_id(forth_runtime_context_t *ctx);			// SOURCE-ID
 extern void forth_left_bracket(forth_runtime_context_t *ctx);
 extern void forth_right_bracket(forth_runtime_context_t *ctx);
 

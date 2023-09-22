@@ -622,6 +622,68 @@ void forth_2store(forth_runtime_context_t *ctx)
 }
 
 #if !defined(FORTH_NO_DOUBLES)
+// D0< ( d -- flag )
+void forth_dzero_less(forth_runtime_context_t *ctx)
+{
+	forth_sdcell_t dtos = (forth_sdcell_t)forth_DPOP(ctx);
+	forth_PUSH(ctx, (dtos < 0) ? FORTH_TRUE : FORTH_FALSE);
+}
+
+// D0< ( d -- flag )
+void forth_dzero_equals(forth_runtime_context_t *ctx)
+{
+	forth_sdcell_t dtos = (forth_sdcell_t)forth_DPOP(ctx);
+	forth_PUSH(ctx, (0 == dtos) ? FORTH_TRUE : FORTH_FALSE);
+}
+
+// D< ( d1 d2 -- flag )
+void forth_dless(forth_runtime_context_t *ctx)
+{
+	forth_sdcell_t d2 = (forth_sdcell_t)forth_DPOP(ctx);
+	forth_sdcell_t d1 = (forth_sdcell_t)forth_DPOP(ctx);
+	forth_PUSH(ctx, (d1 < d2) ? FORTH_TRUE : FORTH_FALSE);
+}
+
+// DU< ( du1 du2 -- flag )
+void forth_duless(forth_runtime_context_t *ctx)
+{
+	forth_udcell_t d2 = forth_DPOP(ctx);
+	forth_udcell_t d1 = forth_DPOP(ctx);
+	forth_PUSH(ctx, (d1 < d2) ? FORTH_TRUE : FORTH_FALSE);
+}
+
+// D= ( d1 d2 -- flag )
+void forth_dequals(forth_runtime_context_t *ctx)
+{
+	forth_sdcell_t d2 = (forth_sdcell_t)forth_DPOP(ctx);
+	forth_sdcell_t d1 = (forth_sdcell_t)forth_DPOP(ctx);
+	forth_PUSH(ctx, (d1 == d2) ? FORTH_TRUE : FORTH_FALSE);
+}
+
+// D+ ( d1 d2 -- d )
+void forth_dplus(forth_runtime_context_t *ctx)
+{
+	forth_dcell_t d2 = forth_DPOP(ctx);
+	forth_dcell_t d1 = forth_DPOP(ctx);
+	forth_DPUSH(ctx, d1+d2);
+}
+
+// D- ( d1 d2 -- d )
+void forth_dminus(forth_runtime_context_t *ctx)
+{
+	forth_dcell_t d2 = forth_DPOP(ctx);
+	forth_dcell_t d1 = forth_DPOP(ctx);
+	forth_DPUSH(ctx, d1-d2);
+}
+
+// M+ ( d1 n -- d )
+void forth_mplus(forth_runtime_context_t *ctx)
+{
+	forth_scell_t   n = (forth_scell_t)forth_POP(ctx);
+	forth_sdcell_t d1 = (forth_sdcell_t)forth_DPOP(ctx);
+	forth_DPUSH(ctx, (forth_dcell_t)(d1+n));
+}
+
 // DNEGATE ( d -- -d )
 void forth_dnegate(forth_runtime_context_t *ctx)
 {
@@ -638,6 +700,55 @@ void forth_dabs(forth_runtime_context_t *ctx)
 	{
 		forth_dnegate(ctx);
 	}
+}
+
+// DMIN ( d1 d2 -- d )
+void forth_dmin(forth_runtime_context_t *ctx)
+{
+	forth_2over(ctx);
+	forth_2over(ctx);
+	forth_dless(ctx);
+	if (0 == forth_POP(ctx))
+	{
+		forth_2swap(ctx);
+	}
+	forth_2drop(ctx);
+}
+
+// DMAX ( d1 d2 -- d )
+void forth_dmax(forth_runtime_context_t *ctx)
+{
+	forth_2over(ctx);
+	forth_2over(ctx);
+	forth_dless(ctx);
+	if (0 != forth_POP(ctx))
+	{
+		forth_2swap(ctx);
+	}
+	forth_2drop(ctx);
+}
+
+// S>D ( s -- d )
+void forth_s_to_d(forth_runtime_context_t *ctx)
+{
+	forth_dup(ctx);
+	forth_zero_less(ctx);
+}
+
+// 2* ( d -- d*2 )
+void forth_d2mul(forth_runtime_context_t *ctx)
+{
+	forth_scell_t tos = (forth_scell_t)forth_DPOP(ctx);
+	tos = tos << 1;
+	forth_DPUSH(ctx, tos);
+}
+
+// 2/ ( d -- d/2 )
+void forth_d2div(forth_runtime_context_t *ctx)
+{
+	forth_scell_t tos = (forth_scell_t)forth_DPOP(ctx);
+	tos = tos >> 1;
+	forth_DPUSH(ctx, tos);
 }
 
 // D. ( d -- )
@@ -763,6 +874,25 @@ void forth_multiply(forth_runtime_context_t *ctx)
     forth_PUSH(ctx, x*y);
 }
 
+// */mod ( x y z -- x*y%z x*y/z )
+void forth_mult_div_mod(forth_runtime_context_t *ctx)
+{
+	forth_scell_t z = (forth_scell_t )forth_POP(ctx);
+    forth_scell_t y = (forth_scell_t )forth_POP(ctx);
+    forth_scell_t x = (forth_scell_t )forth_POP(ctx);
+	forth_sdcell_t d = (forth_sdcell_t)x * (forth_sdcell_t)y;
+
+    forth_PUSH(ctx, (forth_cell_t)(d%z));
+    forth_PUSH(ctx, (forth_cell_t)(d/z));
+}
+
+// */ ( x y z -- x*y/z )
+void forth_mult_div(forth_runtime_context_t *ctx)
+{
+	forth_mult_div_mod(ctx);
+	forth_nip(ctx);
+}
+
 // / ( x y -- x/y )
 void forth_divide(forth_runtime_context_t *ctx)
 {
@@ -785,6 +915,21 @@ void forth_mod(forth_runtime_context_t *ctx)
         forth_THROW(ctx, -10);
     }
     forth_PUSH(ctx, (forth_cell_t)(x%y));
+}
+
+// /MOD ( x y -- x%y x/y )
+void forth_div_mod(forth_runtime_context_t *ctx)
+{
+    forth_scell_t y = (forth_scell_t)forth_POP(ctx);
+    forth_scell_t x = (forth_scell_t)forth_POP(ctx);
+
+    if (0 == y)
+    {
+        forth_THROW(ctx, -10);
+    }
+
+    forth_PUSH(ctx, (forth_cell_t)(x%y));
+	forth_PUSH(ctx, (forth_cell_t)(x/y));
 }
 
 // MIN ( x y -- x|y )
@@ -1331,7 +1476,7 @@ static int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value)
 static int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
-	char *end = buffer + sizeof(ctx->num_buff)/* + 2*/;
+	char *end = buffer + sizeof(ctx->num_buff);
 	char *p;
 	*end = FORTH_CHAR_SPACE;
 	p = forth_FORMAT_UNSIGNED(value, base, 1, end);
@@ -1341,7 +1486,7 @@ static int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, fort
 static int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
-	char *end = buffer + sizeof(ctx->num_buff)/* + 2*/;
+	char *end = buffer + sizeof(ctx->num_buff);
 	forth_scell_t val = (forth_scell_t)value;
 	char *p;
 	*end = FORTH_CHAR_SPACE;
@@ -1360,7 +1505,7 @@ static int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth
 static int forth_DOT_R(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value, forth_cell_t width, forth_cell_t is_signed)
 {
 	char *buffer = ctx->num_buff;
-	char *end = buffer + sizeof(ctx->num_buff)/* + 2*/;
+	char *end = buffer + sizeof(ctx->num_buff);
 	forth_scell_t val = (forth_scell_t)value;
 	char *p;
 	forth_cell_t nlen;
@@ -2362,6 +2507,19 @@ void forth_state(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, (forth_cell_t) &(ctx->state));
 }
 
+// SOURCE ( -- c-addr len )
+void forth_source(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t)(ctx->source_address));
+	forth_PUSH(ctx, ctx->source_length);
+}
+
+// SOURCE-ID ( -- id )
+void forth_source_id(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, ctx->source_id);
+}
+
 // [ ( -- )
 void forth_left_bracket(forth_runtime_context_t *ctx)
 {
@@ -3226,8 +3384,22 @@ DEF_FORTH_WORD("2over",      0, forth_2over,         "( x y a b -- x y a b x y )
 DEF_FORTH_WORD("2rot",       0, forth_2rot,          "( x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2 )"),
 
 #if !defined(FORTH_NO_DOUBLES)
+DEF_FORTH_WORD("d0<",        0, forth_dzero_less,     "( d -- f )"),
+DEF_FORTH_WORD("d0=",        0, forth_dzero_equals,   "( d -- f )"),
+DEF_FORTH_WORD("d<",         0, forth_dless,          "( d1 d2 -- f )"),
+DEF_FORTH_WORD("du<",        0, forth_duless,         "( du1 du2 -- f )"),
+DEF_FORTH_WORD("d=",         0, forth_dequals,        "( d1 d2 -- f )"),
+DEF_FORTH_WORD("d+",         0, forth_dplus,          "( d1 d2 -- d )"),
+DEF_FORTH_WORD("d-",         0, forth_dminus,         "( d1 d2 -- d )"),
+DEF_FORTH_WORD("m+",         0, forth_mplus,          "( d1 n -- d )"),
+DEF_FORTH_WORD("d>s",        0, forth_drop,           "( d -- s )"),
+DEF_FORTH_WORD("s>d",        0, forth_s_to_d,         "( s -- d )"),
 DEF_FORTH_WORD("dnegate",    0, forth_dnegate,        "( d -- -d )"),
 DEF_FORTH_WORD("dabs",    	 0, forth_dabs,        	  "( d -- |d| )"),
+DEF_FORTH_WORD("dmin",    	 0, forth_dmin,        	  "( d1 d2 -- d )"),
+DEF_FORTH_WORD("dmax",    	 0, forth_dmax,        	  "( d1 d2 -- d )"),
+DEF_FORTH_WORD("D2*",     	 0, forth_d2mul,          "( d -- d*2 )"),
+DEF_FORTH_WORD("D2/",     	 0, forth_d2div,          "( d -- d/2 )"),
 DEF_FORTH_WORD("d.",    	 0, forth_ddot,        	  "( d -- )"),
 #endif
 
@@ -3245,6 +3417,9 @@ DEF_FORTH_WORD("-",          0, forth_subtract,      "( x y -- x-y )"),
 DEF_FORTH_WORD("*",          0, forth_multiply,      "( x y -- x*y )"),
 DEF_FORTH_WORD("/",          0, forth_divide,        "( x y -- x/y )"),
 DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
+DEF_FORTH_WORD("/mod",       0, forth_div_mod,      "( x y -- m q )"),
+DEF_FORTH_WORD("*/",         0, forth_mult_div,      "( x y z -- q )"),
+DEF_FORTH_WORD("*/mod",      0, forth_mult_div_mod,  "( x y z -- r q )"),
 DEF_FORTH_WORD("min",        0, forth_min,           "( x y -- min )"),
 DEF_FORTH_WORD("max",        0, forth_max,           "( x y -- max )"),
 DEF_FORTH_WORD("and",        0, forth_and,           "( x y -- x&y )"),
@@ -3319,6 +3494,8 @@ DEF_FORTH_WORD("accept",     0, forth_accept,        "( c-addr len1 -- len2 )"),
 DEF_FORTH_WORD("refill",     0, forth_refill,        "( -- flag )"),
 
 DEF_FORTH_WORD(">in",      	 0, forth_to_in,      	 "( -- addr )"),
+DEF_FORTH_WORD("source",     0, forth_source,      	 "( -- c-addr length )"),
+DEF_FORTH_WORD("source-id",  0, forth_source_id,     "( -- id )"),
 DEF_FORTH_WORD("parse",      0, forth_parse,         "( char -- c-addr len )"),
 DEF_FORTH_WORD("\"",         0, forth_quot,          "( <string> -- c-addr len )"),
 DEF_FORTH_WORD("s\"", FORTH_XT_FLAGS_IMMEDIATE, forth_squot, "( <string> -- c-addr len )"),
@@ -3340,6 +3517,7 @@ DEF_FORTH_WORD("]",      	               0, forth_right_bracket,  "Enter compila
 
 DEF_FORTH_WORD("state",      0, forth_state,         "( -- addr )"),
 DEF_FORTH_WORD("here",       0, forth_here,          "( -- addr )"),
+DEF_FORTH_WORD("pad",        0, forth_here,          "( -- addr )"),
 DEF_FORTH_WORD("unused",     0, forth_unused,        "( -- u )"),
 DEF_FORTH_WORD("aligned",    0, forth_aligned,       "( addr -- a-addr )"),
 DEF_FORTH_WORD("align",      0, forth_align,         "( --  )"),
