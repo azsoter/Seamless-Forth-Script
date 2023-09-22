@@ -333,6 +333,7 @@ extern void forth_colon_noname(forth_runtime_context_t *ctx);
 extern void forth_colon(forth_runtime_context_t *ctx);
 extern void forth_semicolon(forth_runtime_context_t *ctx);
 extern void forth_immediate(forth_runtime_context_t *ctx);
+extern void forth_recurse(forth_runtime_context_t *ctx);
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 

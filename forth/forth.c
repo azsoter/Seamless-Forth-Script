@@ -2086,8 +2086,12 @@ forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
     // but our options are limited,
     //see FIND-NAME for details.
     res = forth_CATCH(ctx, forth_interpret_xt);
-    forth_PRINT_ERROR(ctx, res);
-	ctx->state = 0;
+	if (0 != res)
+	{
+    	forth_PRINT_ERROR(ctx, res);
+		ctx->state = 0;
+		ctx->defining = 0;
+	}
     return res;
 }
 
@@ -2706,6 +2710,7 @@ void forth_colon(forth_runtime_context_t *ctx)
 	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
 	entry->flags = FORTH_XT_FLAGS_ACTION_THREADED;
 	forth_PUSH(ctx, (forth_cell_t)entry);
+	ctx->defining = ctx->sp[0];
 	forth_PUSH(ctx, FORTH_COLON_SYS_MARKER);
 	forth_right_bracket(ctx);
 }
@@ -2720,6 +2725,7 @@ void forth_colon_noname(forth_runtime_context_t *ctx)
 	forth_COMMA(ctx, FORTH_XT_FLAGS_ACTION_THREADED);	// flags
 	forth_COMMA(ctx, ctx->dictionary->latest);			// link
 	forth_dup(ctx);
+	ctx->defining = ctx->sp[0];
 	forth_PUSH(ctx, FORTH_COLON_SYS_MARKER);
 	forth_right_bracket(ctx);
 }
@@ -2743,6 +2749,7 @@ void forth_semicolon(forth_runtime_context_t *ctx)
 	entry = (forth_vocabulary_entry_t *)forth_POP(ctx);
 	entry->link = ctx->dictionary->latest;
 	ctx->dictionary->latest = (forth_cell_t)entry;
+	ctx->defining = 0;
 	forth_left_bracket(ctx);
 }
 
@@ -2756,6 +2763,19 @@ void forth_immediate(forth_runtime_context_t *ctx)
 		entry = (forth_vocabulary_entry_t *)(ctx->dictionary->latest);
 		entry->flags |= FORTH_XT_FLAGS_IMMEDIATE;
 	}
+}
+
+// RECURSE ( -- )
+void forth_recurse(forth_runtime_context_t *ctx)
+{
+	forth_cell_t xt = ctx->defining;
+
+	if (0 == xt)
+	{
+		forth_THROW(ctx, -27); // invalid recursion
+	}
+
+	forth_COMPILE_COMMA(ctx, xt);
 }
 // ---------------------------------------------------------------------------------------------------------------
 void forth_PRINT_NAME(forth_runtime_context_t *ctx, forth_xt_t xt)
@@ -3186,6 +3206,7 @@ DEF_FORTH_WORD("2literal", FORTH_XT_FLAGS_IMMEDIATE, forth_2literal,      "( x y
 DEF_FORTH_WORD("sliteral", FORTH_XT_FLAGS_IMMEDIATE, forth_sliteral,      "( c-addr count --  )"),
 DEF_FORTH_WORD(":noname",    0, forth_colon_noname,  "( -- xt colon-sys )"),
 DEF_FORTH_WORD(":",   		 0, forth_colon,         "( \"name\" -- colon-sys )"),
+DEF_FORTH_WORD("recurse", FORTH_XT_FLAGS_IMMEDIATE, forth_recurse, "( -- )"),
 DEF_FORTH_WORD(";", FORTH_XT_FLAGS_IMMEDIATE, forth_semicolon, "( colon-sys -- )"),
 DEF_FORTH_WORD("immediate",  0, forth_immediate,     "( -- )"),
 DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" -- )"),
