@@ -152,10 +152,14 @@ extern forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_con
 
 extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length);
 
+extern void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, forth_cell_t n);
 extern void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code);
 extern void forth_PUSH(forth_runtime_context_t *ctx, forth_ucell_t x);
-extern void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, forth_cell_t n);
 extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
+extern forth_dcell_t forth_DTOS_READ(forth_runtime_context_t *ctx);
+extern forth_dcell_t forth_DPOP(forth_runtime_context_t *ctx);
+extern forth_dcell_t forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud);
+
 extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
 extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
 extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
@@ -186,6 +190,14 @@ extern void forth_hdot(forth_runtime_context_t *ctx);
 extern void forth_udot(forth_runtime_context_t *ctx);
 extern void forth_dotr(forth_runtime_context_t *ctx);				// .R
 extern void forth_udotr(forth_runtime_context_t *ctx);				// U.R
+
+extern void forth_less_hash(forth_runtime_context_t *ctx);			// <#
+extern void forth_hash(forth_runtime_context_t *ctx);				// #
+extern void forth_hash_s(forth_runtime_context_t *ctx);				// #S
+extern void forth_hold(forth_runtime_context_t *ctx);				// HOLD
+extern void forth_holds(forth_runtime_context_t *ctx);				// HOLDS
+extern void forth_sign(forth_runtime_context_t *ctx);				// SIGN
+extern void forth_hash_greater(forth_runtime_context_t *ctx);		// #>
 
 extern void forth_key(forth_runtime_context_t *ctx);
 extern void forth_key_q(forth_runtime_context_t *ctx); 				// KEY?
@@ -245,6 +257,12 @@ extern void forth_2over(forth_runtime_context_t *ctx);
 extern void forth_2rot(forth_runtime_context_t *ctx);
 extern void forth_2fetch(forth_runtime_context_t *ctx); 			// 2@
 extern void forth_2store(forth_runtime_context_t *ctx); 			// 2!
+
+#if !defined(FORTH_NO_DOUBLES)
+extern void forth_dnegate(forth_runtime_context_t *ctx);
+extern void forth_dabs(forth_runtime_context_t *ctx);
+extern void forth_ddot(forth_runtime_context_t *ctx);
+#endif
 
 extern void forth_to_r(forth_runtime_context_t *ctx);				// >R
 extern void forth_r_fetch(forth_runtime_context_t *ctx);			// R@

@@ -83,6 +83,30 @@ forth_cell_t forth_POP(forth_runtime_context_t *ctx)
     return x;
 }
 
+// Read double on the top of the forth stack, but don't pop it.
+forth_dcell_t forth_DTOS_READ(forth_runtime_context_t *ctx)
+{
+	forth_dcell_t dtos;
+	forth_CHECK_STACK_AT_LEAST(ctx, 2);
+	dtos = FORTH_DCELL(ctx->sp[0], ctx->sp[1]);
+	return dtos;
+}
+
+// Pop a double from the data stack.
+forth_dcell_t forth_DPOP(forth_runtime_context_t *ctx)
+{
+		forth_dcell_t dtos = forth_DTOS_READ(ctx);
+		ctx->sp += 2;
+		return dtos;
+}
+
+// Push a double onto the data stack.
+forth_dcell_t forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud)
+{
+	forth_PUSH(ctx, FORTH_CELL_LOW(ud));
+	forth_PUSH(ctx, FORTH_CELL_HIGH(ud));
+}
+
 // Push an item to the return stack, perform stack checking.
 void forth_RPUSH(forth_runtime_context_t *ctx, forth_ucell_t x)
 {
@@ -516,7 +540,9 @@ void forth_cells(forth_runtime_context_t *ctx)
 	ctx->sp[0] *= sizeof(forth_cell_t);
 }
 
-// ------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------
+//                                                Two item and double operations
+// ---------------------------------------------------------------------------------------------------------------
 // 2DROP ( x y -- )
 void forth_2drop(forth_runtime_context_t *ctx)
 {
@@ -594,6 +620,43 @@ void forth_2store(forth_runtime_context_t *ctx)
 	p[0] = forth_POP(ctx);
 	p[1] = forth_POP(ctx);
 }
+
+#if !defined(FORTH_NO_DOUBLES)
+// DNEGATE ( d -- -d )
+void forth_dnegate(forth_runtime_context_t *ctx)
+{
+	forth_sdcell_t dtos = (forth_sdcell_t)forth_DPOP(ctx);
+	dtos = -dtos;
+	forth_DPUSH(ctx, (forth_dcell_t)dtos);
+}
+
+// DABS ( d -- |d| )
+void forth_dabs(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 2);
+	if (0 > (forth_scell_t)ctx->sp[0])
+	{
+		forth_dnegate(ctx);
+	}
+}
+
+// D. ( d -- )
+void forth_ddot(forth_runtime_context_t *ctx)
+{
+	forth_scell_t x;
+	forth_CHECK_STACK_AT_LEAST(ctx, 2);
+	x = (forth_scell_t)ctx->sp[0];
+	forth_dabs(ctx);
+	forth_less_hash(ctx);
+	forth_PUSH(ctx, FORTH_CHAR_SPACE);
+	forth_hold(ctx);
+	forth_hash_s(ctx);
+	forth_PUSH(ctx, (forth_cell_t)x);
+	forth_sign(ctx);
+	forth_hash_greater(ctx);
+	forth_type(ctx);
+}
+#endif // !defined(FORTH_NO_DOUBLES)
 // ---------------------------------------------------------------------------------------------------------------
 //                                                Return stack operations
 // ---------------------------------------------------------------------------------------------------------------
@@ -1326,6 +1389,88 @@ static int forth_DOT_R(struct forth_runtime_context *ctx, forth_cell_t base, for
 	}
 
 	return ctx->write_string(ctx, p, nlen);
+}
+
+static void forth_check_numbuff(forth_runtime_context_t *ctx)
+{
+	if (ctx->numbuff_ptr < ctx->num_buff)
+	{
+		forth_THROW(ctx, -17); // pictured numeric output string overflow
+	}
+}
+
+// <# ( -- )
+void forth_less_hash(forth_runtime_context_t *ctx)
+{
+	ctx->numbuff_ptr = &(ctx->num_buff[FORTH_NUM_BUFF_LENGTH]);
+}
+
+// HOLD ( char -- )
+void forth_hold(forth_runtime_context_t *ctx)
+{
+	*(--(ctx->numbuff_ptr)) = (char)forth_POP(ctx);
+	forth_check_numbuff(ctx);
+}
+
+// HOLDS ( c-addr u -- )
+void forth_holds(forth_runtime_context_t *ctx)
+{
+	forth_ucell_t cnt = forth_POP(ctx);
+
+	while (cnt--)
+	{
+		forth_count(ctx);	// Cheating, but the implementation has the right behavior.
+		forth_hold(ctx);
+	}
+
+	forth_drop(ctx);
+}
+
+// SIGN ( n -- )
+void forth_sign(forth_runtime_context_t *ctx)
+{
+	forth_scell_t n = (forth_scell_t)forth_POP(ctx);
+	if (n < 0)
+	{
+		forth_PUSH(ctx, (forth_cell_t)'-');
+		forth_hold(ctx);
+	}
+}
+
+// # ( ud1 -- ud2 )
+void forth_hash(forth_runtime_context_t *ctx)
+{
+	forth_udcell_t dtos;
+	forth_cell_t base = ctx->base;
+
+	if (0 == base)
+	{
+		forth_THROW(ctx, -10); // division by zero
+	}
+
+	dtos = forth_DPOP(ctx);
+	*(--(ctx->numbuff_ptr)) = forth_VAL2DIGIT((forth_byte_t)(dtos % base));
+	forth_check_numbuff(ctx);
+	dtos = dtos / base;
+	forth_DPUSH(ctx, dtos);
+}
+
+// #s ( ud1 -- ud2 )
+void forth_hash_s(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 2);
+	do {
+
+		forth_hash(ctx);
+	} while ((0 != ctx->sp[0]) || (0 != ctx->sp[1]));
+}
+
+// #> ( ud -- c-addr u )
+void forth_hash_greater(forth_runtime_context_t *ctx)
+{
+	forth_CHECK_STACK_AT_LEAST(ctx, 2);
+	ctx->sp[1] = (forth_cell_t)(ctx->numbuff_ptr);
+	ctx->sp[0] = (forth_cell_t)(&(ctx->num_buff[FORTH_NUM_BUFF_LENGTH]) - ctx->numbuff_ptr);
 }
 
 int forth_DOTS(forth_runtime_context_t *ctx)
@@ -3080,6 +3225,12 @@ DEF_FORTH_WORD("2swap",      0, forth_2swap,         "( x y a b -- a b x y )"),
 DEF_FORTH_WORD("2over",      0, forth_2over,         "( x y a b -- x y a b x y )"),
 DEF_FORTH_WORD("2rot",       0, forth_2rot,          "( x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2 )"),
 
+#if !defined(FORTH_NO_DOUBLES)
+DEF_FORTH_WORD("dnegate",    0, forth_dnegate,        "( d -- -d )"),
+DEF_FORTH_WORD("dabs",    	 0, forth_dabs,        	  "( d -- |d| )"),
+DEF_FORTH_WORD("d.",    	 0, forth_ddot,        	  "( d -- )"),
+#endif
+
 DEF_FORTH_WORD(">r",         0, forth_to_r,          "( x -- )     R: ( -- x )"),
 DEF_FORTH_WORD("r@",         0, forth_r_fetch,       "( -- x)      R: ( x -- x )"),
 DEF_FORTH_WORD("r>",         0, forth_r_from,        "(  -- x )    R: ( x -- )"),
@@ -3150,6 +3301,14 @@ DEF_FORTH_WORD(".r",         0, forth_dotr,          "( x w -- )"),
 DEF_FORTH_WORD("u.r",        0, forth_udotr,         "( u w -- )"),
 DEF_FORTH_WORD(".s",         0, forth_dots,          "( -- )"),
 DEF_FORTH_WORD("dump",       0, forth_dump,          "( addr count -- )"),
+
+DEF_FORTH_WORD("<#",       	 0, forth_less_hash,     "( -- )"),
+DEF_FORTH_WORD("hold",       0, forth_hold,          "( char -- )"),
+DEF_FORTH_WORD("holds",      0, forth_holds,         "( c-addr len -- )"),
+DEF_FORTH_WORD("sign",       0, forth_sign,          "( n -- )"),
+DEF_FORTH_WORD("#",       	 0, forth_hash,          "( ud1 -- ud2 )"),
+DEF_FORTH_WORD("#s",       	 0, forth_hash_s,        "( ud1 -- ud2 )"),
+DEF_FORTH_WORD("#>",       	 0, forth_hash_greater,  "( ud -- c-addr len )"),
 
 DEF_FORTH_WORD("key?",       0, forth_key_q,         "( -- flag )"),
 DEF_FORTH_WORD("key",        0, forth_key,           "( -- key )"),
@@ -3313,7 +3472,7 @@ int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length
     ctx->source_length = cmd_length;
 	ctx->source_id = -1;
 	ctx->blk = 0;
-
+	forth_less_hash(ctx);	// Initialize the number formatting buffer so accidentally typed in HOLD, etc. does not crash.
     res = forth_RUN_INTERPRET(ctx);
 
     // forth_DOTS(ctx);

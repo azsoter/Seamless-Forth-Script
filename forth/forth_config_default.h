@@ -36,9 +36,11 @@ typedef int64_t  forth_scell_t;
 typedef uint64_t forth_ucell_t;
 
 #if defined(__GNUC__)
-typedef unsigned __int128 forth_dcell_t;
+typedef unsigned __int128 forth_udcell_t;
 typedef __int128  forth_sdcell_t;
 #endif
+
+typedef forth_udcell_t forth_dcell_t;
 
 #define	FORTH_CELL_LOW(X) ((forth_cell_t)((~(forth_cell_t)0) & (X)))
 #define	FORTH_CELL_HIGH(X) ((forth_cell_t)((~(forth_cell_t)0) & ((X)>>64)))
