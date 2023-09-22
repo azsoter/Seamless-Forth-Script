@@ -136,6 +136,7 @@ extern const forth_vocabulary_entry_t forth_wl_system[];
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_xt_t forth_interpret_xt;
 extern const forth_xt_t forth_LIT_xt;
+extern const forth_xt_t forth_XLIT_xt;
 extern const forth_xt_t forth_SLIT_xt;
 extern const forth_xt_t forth_BRANCH_xt;
 extern const forth_xt_t forth_0BRANCH_xt;
@@ -323,12 +324,15 @@ extern void forth_while(forth_runtime_context_t *ctx);
 extern void forth_repeat(forth_runtime_context_t *ctx);
 
 extern void forth_literal(forth_runtime_context_t *ctx);
+extern void forth_xliteral(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);
+extern void forth_colon_noname(forth_runtime_context_t *ctx);
 extern void forth_colon(forth_runtime_context_t *ctx);
 extern void forth_semicolon(forth_runtime_context_t *ctx);
+extern void forth_immediate(forth_runtime_context_t *ctx);
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 

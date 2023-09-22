@@ -2643,6 +2643,13 @@ void forth_literal(forth_runtime_context_t *ctx)
 	forth_comma(ctx);
 }
 
+// XLITERAL Compile: ( xt -- ) Run: ( -- xt ) 
+void forth_xliteral(forth_runtime_context_t *ctx)
+{
+	forth_COMPILE_COMMA(ctx, forth_XLIT_xt);
+	forth_comma(ctx);
+}
+
 // 2LITERAL Compile: ( x y -- ) Run: ( -- x y ) 
 void forth_2literal(forth_runtime_context_t *ctx)
 {
@@ -2703,6 +2710,20 @@ void forth_colon(forth_runtime_context_t *ctx)
 	forth_right_bracket(ctx);
 }
 
+static const char *nameless = "";
+// :NONAME ( -- xt colon-sys )
+void forth_colon_noname(forth_runtime_context_t *ctx)
+{
+	forth_align(ctx);
+	forth_here(ctx);	// xt
+	forth_COMMA(ctx, (forth_cell_t)nameless);
+	forth_COMMA(ctx, FORTH_XT_FLAGS_ACTION_THREADED);	// flags
+	forth_COMMA(ctx, ctx->dictionary->latest);			// link
+	forth_dup(ctx);
+	forth_PUSH(ctx, FORTH_COLON_SYS_MARKER);
+	forth_right_bracket(ctx);
+}
+
 // ; ( colon-sys -- )
 void forth_semicolon(forth_runtime_context_t *ctx)
 {
@@ -2725,23 +2746,50 @@ void forth_semicolon(forth_runtime_context_t *ctx)
 	forth_left_bracket(ctx);
 }
 
+// IMMEDIATE ( -- )
+void forth_immediate(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+
+	if (0 != ctx->dictionary->latest)
+	{
+		entry = (forth_vocabulary_entry_t *)(ctx->dictionary->latest);
+		entry->flags |= FORTH_XT_FLAGS_IMMEDIATE;
+	}
+}
 // ---------------------------------------------------------------------------------------------------------------
 void forth_PRINT_NAME(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
-		forth_TYPE0(ctx, (const char *)(xt->name));
-		forth_space(ctx);
+		if ((0 == xt->name) || (0 == strlen((const char *)xt->name)))
+		{
+			forth_TYPE0(ctx, "NONAME-XT-");
+			forth_PUSH(ctx, (forth_cell_t)xt);
+			forth_hdot(ctx);
+		}
+		else
+		{
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			forth_space(ctx);
+		}
 }
 
 void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
-	forth_cell_t *ip; // = &(xt->meaning);
+	forth_cell_t *ip;
 	forth_xt_t x;
 	forth_cell_t len;
 	forth_cell_t tmp;
 
-	forth_TYPE0(ctx, ": ");
-	//forth_TYPE0(ctx, (const char *)(xt->name));
-	forth_PRINT_NAME(ctx, xt);
+	if ((0 == xt->name) || (0 == strlen((const char *)xt->name)))
+	{
+		forth_TYPE0(ctx, ":noname ");
+	}
+	else
+	{
+		forth_TYPE0(ctx, ": ");
+		forth_PRINT_NAME(ctx, xt);
+	}
+
 	for (ip = &(xt->meaning); 0 != *ip; ip++)
 	{
 		x = *((forth_xt_t *)ip);
@@ -2750,6 +2798,13 @@ void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 		{
 			forth_PUSH(ctx, *++ip);
 			forth_dot(ctx);
+		}
+		else if (forth_XLIT_xt == x)
+		{
+			forth_TYPE0(ctx, " ['] ");
+			ip++;
+			x = *((forth_xt_t *)ip);
+			forth_PRINT_NAME(ctx, x);
 		}
 		else if (forth_SLIT_xt == x)
 		{
@@ -2780,8 +2835,7 @@ void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 			forth_PRINT_NAME(ctx, x);
 		}
 	}
-	forth_TYPE0(ctx, " ;");
-	forth_cr(ctx);
+	forth_EMIT(ctx, ';');
 }
 
 // SEE ( "name" -- )
@@ -2795,7 +2849,6 @@ void forth_see(forth_runtime_context_t *ctx)
 		case FORTH_XT_FLAGS_ACTION_PRIMITIVE:
 			forth_TYPE0(ctx, (const char *)(xt->name));
 			forth_TYPE0(ctx, " is a primitive.");
-			forth_cr(ctx);
 			break;
 
 		case FORTH_XT_FLAGS_ACTION_CONSTANT:
@@ -2803,38 +2856,33 @@ void forth_see(forth_runtime_context_t *ctx)
 			forth_hdot(ctx);
 			forth_TYPE0(ctx, "CONSTANT ");
 			forth_TYPE0(ctx, (const char *)(xt->name));
-			forth_cr(ctx);
 			break;
 
 		case FORTH_XT_FLAGS_ACTION_VARIABLE:
 			forth_TYPE0(ctx, "VARIABLE ");
 			forth_TYPE0(ctx, (const char *)(xt->name));
-			forth_cr(ctx);
 			break;
 
 		case FORTH_XT_FLAGS_ACTION_DEFER:
 			forth_TYPE0(ctx, "DEFER ");
 			forth_TYPE0(ctx, (const char *)(xt->name));
-			forth_cr(ctx);
 			break;
 
 		case FORTH_XT_FLAGS_ACTION_THREADED:
 			forth_SEE_THREADED(ctx, xt);
-			/*
-			forth_TYPE0(ctx, ": ");
-			forth_TYPE0(ctx, (const char *)(xt->name));
-			forth_TYPE0(ctx, " .......... ;");
-			forth_cr(ctx);
-			*/
 			break;
 
 		default:
 			forth_TYPE0(ctx, (const char *)(xt->name));
 			forth_TYPE0(ctx, " ?????");
-			forth_cr(ctx);
 			break;
 	}
-	
+
+	if (0 != (xt->flags & FORTH_XT_FLAGS_IMMEDIATE))
+	{
+		forth_TYPE0(ctx, " immediate");
+	}
+	forth_cr(ctx);
 }
 
 // HELP ( -- )
@@ -2879,19 +2927,21 @@ void forth_words(forth_runtime_context_t *ctx)
 
 	if (0 != ctx->dictionary)
 	{
-
 		for (ep = (forth_vocabulary_entry_t *)(ctx->dictionary->latest); 0 != ep; ep = (forth_vocabulary_entry_t *)(ep->link))
 		{
 			len = strlen((char *)(ep->name));
 
-			if ((ctx->terminal_width - ctx->terminal_col) <= len)
+			if (0 != len)
 			{
-            	forth_cr(ctx);
-        	}
+				if ((ctx->terminal_width - ctx->terminal_col) <= len)
+				{
+            		forth_cr(ctx);
+        		}
 
-        	forth_TYPE0(ctx, (char *)(ep->name));
-        	forth_space(ctx);
-			//ep = (forth_vocabulary_entry_t *)(ep->link);
+        		forth_TYPE0(ctx, (char *)(ep->name));
+        		forth_space(ctx);
+			}
+
 		}
 	}
 
@@ -2955,7 +3005,7 @@ void forth_bracket_tick(forth_runtime_context_t *ctx)
         forth_THROW(ctx, -13);
     }
 
-	forth_literal(ctx);
+	forth_xliteral(ctx);
 }
 
 // CHAR ( "c" -- char )
@@ -3131,12 +3181,15 @@ DEF_FORTH_WORD("while", FORTH_XT_FLAGS_IMMEDIATE, forth_while, "( f -- )"),
 DEF_FORTH_WORD("repeat",FORTH_XT_FLAGS_IMMEDIATE, forth_repeat, "( -- )"),
 
 DEF_FORTH_WORD("literal",  FORTH_XT_FLAGS_IMMEDIATE, forth_literal,       "( x --  )"),
+DEF_FORTH_WORD("xliteral", FORTH_XT_FLAGS_IMMEDIATE, forth_xliteral,      "( xt --  )"),
 DEF_FORTH_WORD("2literal", FORTH_XT_FLAGS_IMMEDIATE, forth_2literal,      "( x y --  )"),
 DEF_FORTH_WORD("sliteral", FORTH_XT_FLAGS_IMMEDIATE, forth_sliteral,      "( c-addr count --  )"),
+DEF_FORTH_WORD(":noname",    0, forth_colon_noname,  "( -- xt colon-sys )"),
 DEF_FORTH_WORD(":",   		 0, forth_colon,         "( \"name\" -- colon-sys )"),
 DEF_FORTH_WORD(";", FORTH_XT_FLAGS_IMMEDIATE, forth_semicolon, "( colon-sys -- )"),
-DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" --)"),
-DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" --)"),
+DEF_FORTH_WORD("immediate",  0, forth_immediate,     "( -- )"),
+DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" -- )"),
+DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" -- )"),
 DEF_FORTH_WORD("cs-pick",	 0, forth_cspick,		  "Pick for the control-flow stack."),
 DEF_FORTH_WORD("cs-roll",	 0, forth_csroll,		  "Roll for the control-flow stack."),
 
@@ -3161,6 +3214,8 @@ DEF_FORTH_WORD( "sp@",  	 0, forth_sp_fetch,      "( -- sp )"),
 DEF_FORTH_WORD( "sp0",  	 0, forth_sp0,      	 "( -- sp0 )"),
 DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
+DEF_FORTH_WORD( "forth",  	 0, forth_noop,      	 "Wordlists are not implemented, this word does nothing."),
+DEF_FORTH_WORD( "definitions",0,forth_noop,      	 "Wordlists are not implemented, this word does nothing."),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
@@ -3172,6 +3227,7 @@ const forth_vocabulary_entry_t forth_wl_system[] =
 {
 DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
 DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),
+DEF_FORTH_WORD("XLIT",        0, forth_lit,           "( -- n )" ),
 DEF_FORTH_WORD("SLIT",       0, forth_slit,          "( -- c-addr len )" ),
 DEF_FORTH_WORD("BRANCH",	 0, forth_branch,		 " ( -- )"),
 DEF_FORTH_WORD("0BRANCH",	 0, forth_0branch,		 " ( flag -- )"),
@@ -3181,10 +3237,11 @@ DEF_FORTH_WORD(0, 0, 0, 0)
 // These refer to items in the array above, if you change one you are likely need to change the other.
 //
 const forth_xt_t forth_interpret_xt = (const forth_xt_t)&(forth_wl_system[0]);
-const forth_xt_t forth_LIT_xt = (const forth_xt_t)&(forth_wl_system[1]);
-const forth_xt_t forth_SLIT_xt = (const forth_xt_t)&(forth_wl_system[2]);
-const forth_xt_t forth_BRANCH_xt = (const forth_xt_t)&(forth_wl_system[3]);
-const forth_xt_t forth_0BRANCH_xt = (const forth_xt_t)&(forth_wl_system[4]);
+const forth_xt_t forth_LIT_xt		= (const forth_xt_t)&(forth_wl_system[1]);
+const forth_xt_t forth_XLIT_xt		= (const forth_xt_t)&(forth_wl_system[2]);
+const forth_xt_t forth_SLIT_xt		= (const forth_xt_t)&(forth_wl_system[3]);
+const forth_xt_t forth_BRANCH_xt	= (const forth_xt_t)&(forth_wl_system[4]);
+const forth_xt_t forth_0BRANCH_xt	= (const forth_xt_t)&(forth_wl_system[5]);
 // -----------------------------------------------------------------------------------------------
 
 // Interpret the text in CMD.

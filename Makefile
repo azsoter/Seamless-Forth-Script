@@ -1,4 +1,5 @@
 CC=gcc
+# CFLAGS+= -O3 -Itest-app -Iforth -MMD  -Xlinker -Map=test.map
 CFLAGS+= -O3 -Itest-app -Iforth -MMD
 # LDFLAGS=-pthread
 
@@ -20,7 +21,7 @@ test: $(OBJ)
 .PHONY: clean
 
 clean:
-	$(RM) *.o *.d test
+	$(RM) *.o *.d test test.map
 
 
 	
