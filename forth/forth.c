@@ -2637,6 +2637,199 @@ void forth_0branch(forth_runtime_context_t *ctx)
 	}
 }
 
+#define FORTH_DO_LOOP_I 0
+#define FORTH_DO_LOOP_J 3
+#define FORTH_DO_LOOP_LIMIT 1
+#define FORTH_DO_LOOP_LEAVE_ADDRESS 2
+
+// (DO) ( limit first -- )
+void forth_do_rt(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *address_after;
+
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+
+	address_after == ctx->ip + (forth_cell_t)(ctx->ip[0]);
+	ctx->ip++;
+	ctx->rp -=3;
+
+	if (ctx->rp < ctx->rp_min)
+    {
+        forth_THROW(ctx, -5); // Return stack overflow.
+    }
+
+	ctx->rp[FORTH_DO_LOOP_I] = forth_POP(ctx);
+	ctx->rp[FORTH_DO_LOOP_LIMIT] = forth_POP(ctx);
+	ctx->rp[FORTH_DO_LOOP_LEAVE_ADDRESS] = (forth_cell_t)address_after;
+}
+
+// (?DO) ( limit first -- )
+void forth_qdo_rt(forth_runtime_context_t *ctx)
+{
+
+}
+
+// ( -- ) R: ( loop-sys -- )
+void forth_unloop(forth_runtime_context_t *ctx)
+{
+	ctx->rp += 3;
+
+	if (ctx->rp > ctx->rp_max)
+    {
+        forth_THROW(ctx, -26);  // loop parameters unavailable
+    }
+}
+
+// ( -- ) R: ( loop-sys -- )
+void forth_leave(forth_runtime_context_t *ctx)
+{
+	if ((ctx->rp + 3) > ctx->rp_max)
+    {
+        forth_THROW(ctx, -26);  // loop parameters unavailable
+    }
+
+	ctx->ip = (forth_cell_t *)(ctx->rp[FORTH_DO_LOOP_LEAVE_ADDRESS]);
+	ctx->rp += 3;
+}
+
+void forth_i(forth_runtime_context_t *ctx)
+{
+	if ((ctx->rp + 3) > ctx->rp_max)
+    {
+        forth_THROW(ctx, -26);  // loop parameters unavailable
+    }
+
+	forth_PUSH(ctx, ctx->rp[FORTH_DO_LOOP_I]);
+}
+
+void forth_j(forth_runtime_context_t *ctx)
+{
+	if ((ctx->rp + 6) > ctx->rp_max)
+    {
+        forth_THROW(ctx, -26);  // loop parameters unavailable
+    }
+
+	forth_PUSH(ctx, ctx->rp[FORTH_DO_LOOP_J]);
+}
+
+// The implementation behind LOOP.
+// ( -- ) R: ( loop-sys -- )
+void forth_loop_rt(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+
+	if ((ctx->rp + 3) > ctx->rp_max)
+    {
+        forth_THROW(ctx, -6);  // Return stack underflow.
+    }
+
+	ctx->rp[FORTH_DO_LOOP_I] += 1;
+
+	if (ctx->rp[FORTH_DO_LOOP_I] == ctx->rp[FORTH_DO_LOOP_LIMIT])
+	{
+		forth_unloop(ctx);
+		ctx->ip++;
+	}
+	else
+	{
+		ctx->ip += (forth_cell_t)(ctx->ip[0]);
+	}
+}
+
+// The implementation behind LOOP.
+// ( inc -- ) R: ( loop-sys -- )
+void forth_plus_loop_rt(forth_runtime_context_t *ctx)
+{
+	forth_cell_t inc;
+	forth_scell_t tmp;
+
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+
+	if ((ctx->rp + 3) > ctx->rp_max)
+    {
+        forth_THROW(ctx, -6);  // Return stack underflow.
+    }
+
+	inc = forth_POP(ctx);
+
+	ctx->rp[FORTH_DO_LOOP_I] += inc;
+
+ 	// Some 2's complement's trickery to determine if the limit has just been crossed.
+	tmp = (forth_scell_t)((ctx->rp[FORTH_DO_LOOP_I] - ctx->rp[FORTH_DO_LOOP_LIMIT]) ^ inc);
+	if (0 > tmp)
+	{
+		ctx->ip += (forth_cell_t)(ctx->ip[0]);
+
+	}
+	else
+	{
+		forth_unloop(ctx);
+		ctx->ip++;
+	}
+}
+
+// DO ( limit start -- )
+void forth_do(forth_runtime_context_t *ctx)
+{
+	forth_COMPILE_COMMA(ctx, forth_pDO_xt); // (do)
+	forth_here(ctx);
+	forth_COMMA(ctx, 0);
+	forth_PUSH(ctx, FORTH_DO_MARKER);
+}
+
+// ?DO ( limit start -- )
+void forth_q_do(forth_runtime_context_t *ctx)
+{
+
+}
+
+// LOOP ( -- )
+void forth_loop(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *do_addr;
+	forth_cell_t *here;
+
+	if (FORTH_DO_MARKER != forth_POP(ctx))
+	{
+		forth_THROW(ctx, -22); // control structure mismatch
+	}
+
+	forth_COMPILE_COMMA(ctx, forth_pLOOP_xt);
+	do_addr = (forth_cell_t *)forth_POP(ctx);
+	forth_here(ctx);
+	here = (forth_cell_t *)forth_POP(ctx);
+	*do_addr = (forth_cell_t)(here - do_addr);
+	forth_COMMA(ctx, (forth_cell_t)((do_addr + 1) - here));
+}
+
+// +LOOP ( n -- )
+void forth_plus_loop(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *do_addr;
+	forth_cell_t *here;
+
+	if (FORTH_DO_MARKER != forth_POP(ctx))
+	{
+		forth_THROW(ctx, -22); // control structure mismatch
+	}
+
+	forth_COMPILE_COMMA(ctx, forth_ppLOOP_xt);
+	do_addr = (forth_cell_t *)forth_POP(ctx);
+	forth_here(ctx);
+	here = (forth_cell_t *)forth_POP(ctx);
+	*do_addr = (forth_cell_t)(here - do_addr);
+	forth_COMMA(ctx, (forth_cell_t)((do_addr + 1) - here));
+}
+
 // Interpreter for threaded code.
 void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -3302,6 +3495,26 @@ void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 			forth_TYPE0(ctx, ", ] ");
 			forth_space(ctx);
 		}
+		else if (forth_pDO_xt == x)
+		{
+			ip += 1;
+			forth_TYPE0(ctx, "do ");
+		}
+		else if (forth_pqDO_xt == x)
+		{
+			ip += 1;
+			forth_TYPE0(ctx, "?do ");
+		}
+		else if (forth_pLOOP_xt == x)
+		{
+			ip += 1;
+			forth_TYPE0(ctx, "loop ");
+		}
+		else if (forth_ppLOOP_xt == x)
+		{
+			ip += 1;
+			forth_TYPE0(ctx, "+loop ");
+		}
 		else
 		{
 			forth_PRINT_NAME(ctx, x);
@@ -3688,6 +3901,14 @@ DEF_FORTH_WORD("until", FORTH_XT_FLAGS_IMMEDIATE, forth_until, "( f -- )"),
 DEF_FORTH_WORD("while", FORTH_XT_FLAGS_IMMEDIATE, forth_while, "( f -- )"),
 DEF_FORTH_WORD("repeat",FORTH_XT_FLAGS_IMMEDIATE, forth_repeat, "( -- )"),
 
+DEF_FORTH_WORD("do",    FORTH_XT_FLAGS_IMMEDIATE, forth_do,     "( limit start -- )"),
+DEF_FORTH_WORD("i",     	0, forth_i,                         "( -- i )"),
+DEF_FORTH_WORD("j",     	0, forth_j,                         "( -- j )"),
+DEF_FORTH_WORD("unloop",	0, forth_unloop,                    "( -- )"),
+DEF_FORTH_WORD("leave",		0, forth_leave,                     "( -- )"),
+DEF_FORTH_WORD("loop",  FORTH_XT_FLAGS_IMMEDIATE, forth_loop,	"( -- )"),
+DEF_FORTH_WORD("+loop", FORTH_XT_FLAGS_IMMEDIATE, forth_plus_loop, "( inc -- )"),
+
 DEF_FORTH_WORD("literal",  FORTH_XT_FLAGS_IMMEDIATE, forth_literal,       "( x --  )"),
 DEF_FORTH_WORD("xliteral", FORTH_XT_FLAGS_IMMEDIATE, forth_xliteral,      "( xt --  )"),
 DEF_FORTH_WORD("2literal", FORTH_XT_FLAGS_IMMEDIATE, forth_2literal,      "( x y --  )"),
@@ -3739,12 +3960,16 @@ DEF_FORTH_WORD(0, 0, 0, 0)
 //
 const forth_vocabulary_entry_t forth_wl_system[] =
 {
-DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),
-DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),
-DEF_FORTH_WORD("XLIT",        0, forth_lit,           "( -- n )" ),
-DEF_FORTH_WORD("SLIT",       0, forth_slit,          "( -- c-addr len )" ),
-DEF_FORTH_WORD("BRANCH",	 0, forth_branch,		 " ( -- )"),
-DEF_FORTH_WORD("0BRANCH",	 0, forth_0branch,		 " ( flag -- )"),
+DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),							//  0
+DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),							//  1
+DEF_FORTH_WORD("XLIT",       0, forth_lit,           "( -- n )" ),							//  2
+DEF_FORTH_WORD("SLIT",       0, forth_slit,          "( -- c-addr len )" ),					//  3
+DEF_FORTH_WORD("BRANCH",	 0, forth_branch,		 " ( -- )"),							//  4
+DEF_FORTH_WORD("0BRANCH",	 0, forth_0branch,		 " ( flag -- )"),						//  5
+DEF_FORTH_WORD("(DO)",	     0, forth_do_rt,		 " ( limit start -- )"),				//  6
+DEF_FORTH_WORD("(?DO)",	     0, forth_qdo_rt,		 " ( limit start -- )"),				//  7
+DEF_FORTH_WORD("(LOOP)",	 0, forth_loop_rt,		 " ( -- )"),							//  8
+DEF_FORTH_WORD("(+LOOP)",	 0, forth_plus_loop_rt,	 " ( inc -- )"),						//  9
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
@@ -3756,6 +3981,10 @@ const forth_xt_t forth_XLIT_xt		= (const forth_xt_t)&(forth_wl_system[2]);
 const forth_xt_t forth_SLIT_xt		= (const forth_xt_t)&(forth_wl_system[3]);
 const forth_xt_t forth_BRANCH_xt	= (const forth_xt_t)&(forth_wl_system[4]);
 const forth_xt_t forth_0BRANCH_xt	= (const forth_xt_t)&(forth_wl_system[5]);
+const forth_xt_t forth_pDO_xt		= (const forth_xt_t)&(forth_wl_system[6]);
+const forth_xt_t forth_pqDO_xt		= (const forth_xt_t)&(forth_wl_system[7]);
+const forth_xt_t forth_pLOOP_xt		= (const forth_xt_t)&(forth_wl_system[8]);
+const forth_xt_t forth_ppLOOP_xt	= (const forth_xt_t)&(forth_wl_system[9]);
 // -----------------------------------------------------------------------------------------------
 
 // Interpret the text in CMD.

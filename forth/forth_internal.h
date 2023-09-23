@@ -130,6 +130,7 @@ struct forth_runtime_context
 #define FORTH_COLON_SYS_MARKER	0x4e4c4f43
 #define FORTH_DEST_MARKER 		0x54534544
 #define FORTH_ORIG_MARKER		0x4749524F
+#define FORTH_DO_MARKER			0x4F446f64
 
 extern const forth_vocabulary_entry_t forth_wl_forth[];
 extern const forth_vocabulary_entry_t forth_wl_system[];
@@ -140,6 +141,10 @@ extern const forth_xt_t forth_XLIT_xt;
 extern const forth_xt_t forth_SLIT_xt;
 extern const forth_xt_t forth_BRANCH_xt;
 extern const forth_xt_t forth_0BRANCH_xt;
+extern const forth_xt_t forth_pDO_xt;
+extern const forth_xt_t forth_pqDO_xt;
+extern const forth_xt_t forth_pLOOP_xt;
+extern const forth_xt_t forth_ppLOOP_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
@@ -363,6 +368,15 @@ extern void forth_again(forth_runtime_context_t *ctx);
 extern void forth_until(forth_runtime_context_t *ctx);
 extern void forth_while(forth_runtime_context_t *ctx);
 extern void forth_repeat(forth_runtime_context_t *ctx);
+
+extern void forth_do(forth_runtime_context_t *ctx);
+extern void forth_q_do(forth_runtime_context_t *ctx);
+extern void forth_i(forth_runtime_context_t *ctx);
+extern void forth_j(forth_runtime_context_t *ctx);
+extern void forth_unloop(forth_runtime_context_t *ctx);
+extern void forth_leave(forth_runtime_context_t *ctx);
+extern void forth_loop(forth_runtime_context_t *ctx);
+extern void forth_plus_loop(forth_runtime_context_t *ctx);
 
 extern void forth_literal(forth_runtime_context_t *ctx);
 extern void forth_xliteral(forth_runtime_context_t *ctx);
