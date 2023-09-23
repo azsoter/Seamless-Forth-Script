@@ -570,6 +570,24 @@ void forth_rshift(forth_runtime_context_t *ctx)
 	ctx->sp[0] >>= sh;
 }
 
+// M* ( n1 n2  -- d )
+void forth_m_mult(forth_runtime_context_t *ctx)
+{
+	forth_scell_t n2 = (forth_scell_t)forth_POP(ctx);
+	forth_scell_t n1 = (forth_scell_t)forth_POP(ctx);
+	forth_sdcell_t d = ((forth_sdcell_t)n1) * n2;
+	forth_DPUSH(ctx, (forth_dcell_t)d);
+}
+
+// UM* ( u1 u2  -- ud )
+void forth_um_mult(forth_runtime_context_t *ctx)
+{
+	forth_cell_t u2 = forth_POP(ctx);
+	forth_cell_t u1 = forth_POP(ctx);
+	forth_dcell_t ud = ((forth_dcell_t)u1) * u2;
+	forth_DPUSH(ctx, ud);
+}
+
 // 1+ ( x -- x+1 )
 void forth_1plus(forth_runtime_context_t *ctx)
 {
@@ -3865,6 +3883,8 @@ DEF_FORTH_WORD("negate",     0, forth_negate,        "( x -- -x )"),
 DEF_FORTH_WORD("abs",     	 0, forth_abs,        	 "( x -- |x| )"),
 DEF_FORTH_WORD("lshift",     0, forth_lshift,        "( x sh -- x1 )"),
 DEF_FORTH_WORD("rshift",     0, forth_rshift,        "( x sh -- x1 )"),
+DEF_FORTH_WORD("m*",     	 0, forth_m_mult,        "( x y -- d )"),
+DEF_FORTH_WORD("um*",     	 0, forth_um_mult,       "( x y -- d )"),
 DEF_FORTH_WORD("2*",     	 0, forth_2mul,        	 "( x -- x*2 )"),
 DEF_FORTH_WORD("2/",     	 0, forth_2div,        	 "( x -- x/2 )"),
 DEF_FORTH_WORD("1+",     	 0, forth_1plus,         "( x -- x+1 )"),
