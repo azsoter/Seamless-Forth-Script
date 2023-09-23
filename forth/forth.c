@@ -2652,7 +2652,12 @@ void forth_do_rt(forth_runtime_context_t *ctx)
 		forth_THROW(ctx, -21); // Unsupported operation.
 	}
 
-	address_after == ctx->ip + (forth_cell_t)(ctx->ip[0]);
+	//forth_TYPE0(ctx, "ip ="); forth_PUSH(ctx, (forth_cell_t)ctx->ip); forth_hdot(ctx); forth_cr(ctx);
+
+	address_after = ctx->ip + (forth_cell_t)(ctx->ip[0]);
+
+	//forth_TYPE0(ctx, "address_after="); forth_PUSH(ctx, (forth_cell_t)address_after); forth_hdot(ctx); forth_cr(ctx);
+
 	ctx->ip++;
 	ctx->rp -=3;
 
@@ -2669,7 +2674,34 @@ void forth_do_rt(forth_runtime_context_t *ctx)
 // (?DO) ( limit first -- )
 void forth_qdo_rt(forth_runtime_context_t *ctx)
 {
+	forth_cell_t *address_after;
+	forth_cell_t index = forth_POP(ctx);
+	forth_cell_t limit = forth_POP(ctx);
 
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+
+	address_after = ctx->ip + (forth_cell_t)(ctx->ip[0]);
+	ctx->ip++;
+
+	if (index == limit)
+	{
+		ctx->ip = address_after;
+		return;
+	}
+
+	ctx->rp -=3;
+
+	if (ctx->rp < ctx->rp_min)
+    {
+        forth_THROW(ctx, -5); // Return stack overflow.
+    }
+
+	ctx->rp[FORTH_DO_LOOP_I] = index;
+	ctx->rp[FORTH_DO_LOOP_LIMIT] = limit;
+	ctx->rp[FORTH_DO_LOOP_LEAVE_ADDRESS] = (forth_cell_t)address_after;
 }
 
 // ( -- ) R: ( loop-sys -- )
@@ -2695,6 +2727,7 @@ void forth_leave(forth_runtime_context_t *ctx)
 	ctx->rp += 3;
 }
 
+// I ( -- i )
 void forth_i(forth_runtime_context_t *ctx)
 {
 	if ((ctx->rp + 3) > ctx->rp_max)
@@ -2705,6 +2738,7 @@ void forth_i(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, ctx->rp[FORTH_DO_LOOP_I]);
 }
 
+// J ( -- j )
 void forth_j(forth_runtime_context_t *ctx)
 {
 	if ((ctx->rp + 6) > ctx->rp_max)
@@ -2780,7 +2814,7 @@ void forth_plus_loop_rt(forth_runtime_context_t *ctx)
 // DO ( limit start -- )
 void forth_do(forth_runtime_context_t *ctx)
 {
-	forth_COMPILE_COMMA(ctx, forth_pDO_xt); // (do)
+	forth_COMPILE_COMMA(ctx, forth_pDO_xt); // (DO)
 	forth_here(ctx);
 	forth_COMMA(ctx, 0);
 	forth_PUSH(ctx, FORTH_DO_MARKER);
@@ -2789,7 +2823,10 @@ void forth_do(forth_runtime_context_t *ctx)
 // ?DO ( limit start -- )
 void forth_q_do(forth_runtime_context_t *ctx)
 {
-
+	forth_COMPILE_COMMA(ctx, forth_pqDO_xt); // (?DO)
+	forth_here(ctx);
+	forth_COMMA(ctx, 0);
+	forth_PUSH(ctx, FORTH_DO_MARKER);
 }
 
 // LOOP ( -- )
@@ -2807,8 +2844,9 @@ void forth_loop(forth_runtime_context_t *ctx)
 	do_addr = (forth_cell_t *)forth_POP(ctx);
 	forth_here(ctx);
 	here = (forth_cell_t *)forth_POP(ctx);
-	*do_addr = (forth_cell_t)(here - do_addr);
+	*do_addr = (forth_cell_t)((here + 1) - do_addr);
 	forth_COMMA(ctx, (forth_cell_t)((do_addr + 1) - here));
+	//printf("here = 0x%16lx\r\n", here);
 }
 
 // +LOOP ( n -- )
@@ -2826,7 +2864,7 @@ void forth_plus_loop(forth_runtime_context_t *ctx)
 	do_addr = (forth_cell_t *)forth_POP(ctx);
 	forth_here(ctx);
 	here = (forth_cell_t *)forth_POP(ctx);
-	*do_addr = (forth_cell_t)(here - do_addr);
+	*do_addr = (forth_cell_t)((here + 1) - do_addr);
 	forth_COMMA(ctx, (forth_cell_t)((do_addr + 1) - here));
 }
 
@@ -3902,6 +3940,7 @@ DEF_FORTH_WORD("while", FORTH_XT_FLAGS_IMMEDIATE, forth_while, "( f -- )"),
 DEF_FORTH_WORD("repeat",FORTH_XT_FLAGS_IMMEDIATE, forth_repeat, "( -- )"),
 
 DEF_FORTH_WORD("do",    FORTH_XT_FLAGS_IMMEDIATE, forth_do,     "( limit start -- )"),
+DEF_FORTH_WORD("?do",   FORTH_XT_FLAGS_IMMEDIATE, forth_q_do,   "( limit start -- )"),
 DEF_FORTH_WORD("i",     	0, forth_i,                         "( -- i )"),
 DEF_FORTH_WORD("j",     	0, forth_j,                         "( -- j )"),
 DEF_FORTH_WORD("unloop",	0, forth_unloop,                    "( -- )"),
