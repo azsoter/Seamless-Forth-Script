@@ -969,6 +969,15 @@ void forth_mult_div(forth_runtime_context_t *ctx)
 	forth_nip(ctx);
 }
 
+// UM/MOD ( ud u -- m q )
+void forth_um_div_mod(forth_runtime_context_t *ctx)
+{
+	forth_cell_t u = forth_POP(ctx);
+	forth_dcell_t ud = forth_DPOP(ctx);
+
+	forth_PUSH(ctx, (forth_cell_t)(ud % u));
+	forth_PUSH(ctx, (forth_cell_t)(ud / u));
+}
 // / ( x y -- x/y )
 void forth_divide(forth_runtime_context_t *ctx)
 {
@@ -2255,6 +2264,34 @@ int forth_PROCESS_NUMBER(forth_runtime_context_t *ctx, const char *buff, forth_c
 	puts("-----------------------------------------------------------");
 #endif
 	return 0;
+}
+
+// >NUMBER ( ud c-addr len -- ud1 c-addr1 len1 )
+void forth_to_number(forth_runtime_context_t *ctx)
+{
+	forth_cell_t len = forth_POP(ctx);
+	const char *p = (const char *)forth_POP(ctx);
+	forth_dcell_t dtos = forth_DPOP(ctx);
+	forth_cell_t base = ctx->base;
+	forth_cell_t digit;
+
+	while(0 != len)
+	{
+		digit = map_digit(*p);
+
+		if (digit >= base)
+		{
+			break;
+		}
+
+		dtos = (dtos * base) + digit;
+		len--;
+		p++;
+	}
+
+	forth_DPUSH(ctx, dtos);
+	forth_PUSH(ctx, (forth_cell_t)p);
+	forth_PUSH(ctx, len);
 }
 // ---------------------------------------------------------------------------------------------------------------
 void forth_interpret(forth_runtime_context_t *ctx)
@@ -3868,6 +3905,7 @@ DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
 DEF_FORTH_WORD("/mod",       0, forth_div_mod,      "( x y -- m q )"),
 DEF_FORTH_WORD("*/",         0, forth_mult_div,      "( x y z -- q )"),
 DEF_FORTH_WORD("*/mod",      0, forth_mult_div_mod,  "( x y z -- r q )"),
+DEF_FORTH_WORD("um/mod",     0, forth_um_div_mod,    "( ud u -- m q )"),
 DEF_FORTH_WORD("within",     0, forth_within,        "( x low high -- flag )"),
 DEF_FORTH_WORD("min",        0, forth_min,           "( x y -- min )"),
 DEF_FORTH_WORD("max",        0, forth_max,           "( x y -- max )"),
@@ -3949,6 +3987,7 @@ DEF_FORTH_WORD(">in",      	 0, forth_to_in,      	 "( -- addr )"),
 DEF_FORTH_WORD("source",     0, forth_source,      	 "( -- c-addr length )"),
 DEF_FORTH_WORD("source-id",  0, forth_source_id,     "( -- id )"),
 DEF_FORTH_WORD("parse",      0, forth_parse,         "( char -- c-addr len )"),
+DEF_FORTH_WORD(">number",    0, forth_to_number,     "( ud c-addr len -- ud1 c-addr1 len1 )"),
 DEF_FORTH_WORD("\"",         0, forth_quot,          "( <string> -- c-addr len )"),
 DEF_FORTH_WORD("s\"", FORTH_XT_FLAGS_IMMEDIATE, forth_squot,     "( <string> -- c-addr len )"),
 DEF_FORTH_WORD(".\"", FORTH_XT_FLAGS_IMMEDIATE, forth_dot_quote, "( <string> -- )"),
@@ -4046,6 +4085,7 @@ DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
 DEF_FORTH_WORD( "forth",  	 0, forth_noop,      	 "Wordlists are not implemented, this word does nothing."),
 DEF_FORTH_WORD( "definitions",0,forth_noop,      	 "Wordlists are not implemented, this word does nothing."),
+DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "( -- v ) The version number of this system."),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 

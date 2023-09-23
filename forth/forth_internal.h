@@ -183,6 +183,8 @@ extern void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_execute(forth_runtime_context_t *ctx);
 extern void forth_trace_on(forth_runtime_context_t *ctx);
 extern void forth_trace_off(forth_runtime_context_t *ctx);
+extern void forth_to_number(forth_runtime_context_t *ctx);			// >NUMBER
+extern void forth_interpret(forth_runtime_context_t *ctx);			// INTERPRET
 extern void forth_paren_trace(forth_runtime_context_t *ctx); 		// (TRACE)
 extern void forth_catch(forth_runtime_context_t *ctx);
 extern void forth_throw(forth_runtime_context_t *ctx);
@@ -312,6 +314,7 @@ extern void forth_mod(forth_runtime_context_t *ctx);				// MOD
 extern void forth_div_mod(forth_runtime_context_t *ctx);			// /MOD
 extern void forth_mult_div_mod(forth_runtime_context_t *ctx);		// */MOD
 extern void forth_mult_div(forth_runtime_context_t *ctx);			// */
+extern void forth_um_div_mod(forth_runtime_context_t *ctx);			// UM/MOD
 extern void forth_min(forth_runtime_context_t *ctx);
 extern void forth_within(forth_runtime_context_t *ctx);
 extern void forth_max(forth_runtime_context_t *ctx);
