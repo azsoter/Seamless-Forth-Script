@@ -54,7 +54,7 @@ struct forth_vocabulary_entry_struct
 #define FORTH_XT_FLAGS_ACTION_VARIABLE	0x02
 #define FORTH_XT_FLAGS_ACTION_DEFER		0x03
 #define	FORTH_XT_FLAGS_ACTION_THREADED	0x04
-
+#define	FORTH_XT_FLAGS_ACTION_CREATE	0x05
 struct forth_dictionary
 {
 	forth_ucell_t	dp;			// An index to items.
@@ -77,7 +77,7 @@ struct forth_runtime_context
 	forth_cell_t	*rp0;
 	forth_cell_t	*rp;
 	// forth_xt_t		*ip;
-	forth_cell_t		*ip;
+	forth_cell_t	*ip;
 	forth_cell_t	base;	// Numeric base.
 	forth_cell_t	state;
 	forth_cell_t	throw_handler;
@@ -149,6 +149,7 @@ extern const forth_xt_t forth_pDO_xt;
 extern const forth_xt_t forth_pqDO_xt;
 extern const forth_xt_t forth_pLOOP_xt;
 extern const forth_xt_t forth_ppLOOP_xt;
+extern const forth_xt_t forth_pDOES_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
@@ -178,6 +179,8 @@ extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
 extern void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt);
+extern void forth_DoDefer(forth_runtime_context_t *ctx, forth_xt_t xt);
+extern void forth_DoCreate(forth_runtime_context_t *ctx, forth_xt_t xt);
 
 // Primitives
 extern void forth_execute(forth_runtime_context_t *ctx);
@@ -401,10 +404,14 @@ extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);
+extern void forth_create(forth_runtime_context_t *ctx);
+extern void forth_p_does(forth_runtime_context_t *ctx);				// (does>)
+extern void forth_does(forth_runtime_context_t *ctx);				// DOES>
 extern void forth_colon_noname(forth_runtime_context_t *ctx);
 extern void forth_colon(forth_runtime_context_t *ctx);
 extern void forth_semicolon(forth_runtime_context_t *ctx);
 extern void forth_immediate(forth_runtime_context_t *ctx);
+void forth_latest(forth_runtime_context_t *ctx);
 extern void forth_recurse(forth_runtime_context_t *ctx);
 
 extern void forth_bye(forth_runtime_context_t *ctx);
