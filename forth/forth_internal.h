@@ -227,6 +227,8 @@ extern void forth_dot_paren(forth_runtime_context_t *ctx);
 extern void forth_invert(forth_runtime_context_t *ctx);
 extern void forth_negate(forth_runtime_context_t *ctx);
 extern void forth_abs(forth_runtime_context_t *ctx);
+extern void forth_lshift(forth_runtime_context_t *ctx);			// LSHIFT
+extern void forth_rshift(forth_runtime_context_t *ctx);			// RSHIFT
 extern void forth_2mul(forth_runtime_context_t *ctx); 				// 2*
 extern void forth_2div(forth_runtime_context_t *ctx); 				// 2*
 extern void forth_sp_fetch(forth_runtime_context_t *ctx);			// SP@
