@@ -136,6 +136,10 @@ extern const forth_vocabulary_entry_t forth_wl_forth[];
 extern const forth_vocabulary_entry_t forth_wl_system[];
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
 extern const forth_xt_t forth_interpret_xt;
+extern const forth_xt_t forth_drop_xt;
+extern const forth_xt_t forth_over_xt;
+extern const forth_xt_t forth_equals_xt;
+extern const forth_xt_t forth_type_xt;
 extern const forth_xt_t forth_LIT_xt;
 extern const forth_xt_t forth_XLIT_xt;
 extern const forth_xt_t forth_SLIT_xt;
@@ -220,6 +224,7 @@ extern void forth_parse(forth_runtime_context_t *ctx);
 extern void forth_parse_name(forth_runtime_context_t *ctx);
 extern void forth_quot(forth_runtime_context_t *ctx);
 extern void forth_squot(forth_runtime_context_t *ctx);
+extern void forth_dot_quote(forth_runtime_context_t *ctx);
 extern void forth_paren(forth_runtime_context_t *ctx);
 extern void forth_backslash(forth_runtime_context_t *ctx);
 extern void forth_dot_paren(forth_runtime_context_t *ctx);
@@ -362,6 +367,11 @@ extern void forth_allot(forth_runtime_context_t *ctx);
 extern void forth_count(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); 			// C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 			// ,
+
+extern void forth_case(forth_runtime_context_t *ctx);				// CASE
+extern void forth_of(forth_runtime_context_t *ctx);					// OF
+extern void forth_endof(forth_runtime_context_t *ctx);				// ENDOF
+extern void forth_endcase(forth_runtime_context_t *ctx);			// ENDCASE
 
 extern void forth_ahead(forth_runtime_context_t *ctx);
 extern void forth_if(forth_runtime_context_t *ctx);					// IF
