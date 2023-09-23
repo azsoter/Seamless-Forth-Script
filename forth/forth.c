@@ -2968,6 +2968,16 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 	ctx->ip = caller_ip;
 }
 
+// EXIT ( -- )
+// Given the implementation of the inner interpreter (above) in order to exit some threaded code
+// we just need to point ctx->ip to a cell that is set to 0.
+// So this implementation will work.
+void forth_exit(forth_runtime_context_t *ctx)
+{
+	static const forth_cell_t the_end = 0;
+	ctx->ip = (forth_cell_t *)&the_end;
+}
+
 // Details of how constants are implemented.
 void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -4143,6 +4153,7 @@ DEF_FORTH_WORD("again", FORTH_XT_FLAGS_IMMEDIATE, forth_again, "( -- )"),
 DEF_FORTH_WORD("until", FORTH_XT_FLAGS_IMMEDIATE, forth_until, "( f -- )"),
 DEF_FORTH_WORD("while", FORTH_XT_FLAGS_IMMEDIATE, forth_while, "( f -- )"),
 DEF_FORTH_WORD("repeat",FORTH_XT_FLAGS_IMMEDIATE, forth_repeat, "( -- )"),
+DEF_FORTH_WORD("exit",		 0, forth_exit,           "( -- )"),
 
 DEF_FORTH_WORD("case",   FORTH_XT_FLAGS_IMMEDIATE, forth_case,    "( -- )"),
 DEF_FORTH_WORD("of",     FORTH_XT_FLAGS_IMMEDIATE, forth_of,      "( x1 x2  -- x1 )"),

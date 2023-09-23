@@ -404,7 +404,8 @@ extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);
-extern void forth_create(forth_runtime_context_t *ctx);
+extern void forth_create(forth_runtime_context_t *ctx);				// CREATE
+extern void forth_to_body(forth_runtime_context_t *ctx);			// >BODY
 extern void forth_p_does(forth_runtime_context_t *ctx);				// (does>)
 extern void forth_does(forth_runtime_context_t *ctx);				// DOES>
 extern void forth_colon_noname(forth_runtime_context_t *ctx);
@@ -413,6 +414,7 @@ extern void forth_semicolon(forth_runtime_context_t *ctx);
 extern void forth_immediate(forth_runtime_context_t *ctx);
 void forth_latest(forth_runtime_context_t *ctx);
 extern void forth_recurse(forth_runtime_context_t *ctx);
+extern void forth_exit(forth_runtime_context_t *ctx);
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 
