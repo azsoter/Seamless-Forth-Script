@@ -265,6 +265,25 @@ void forth_sp_fetch(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, (forth_cell_t)(ctx->sp));
 }
 
+// SP! ( sp -- )
+void forth_sp_store(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *sp = (forth_cell_t *)forth_POP(ctx);
+
+
+	if (sp < ctx->sp_min)
+    {
+        forth_THROW(ctx, -3);  // Stack overflow.
+    }
+
+	if (sp > ctx->sp_max)
+    {
+        forth_THROW(ctx, -4); // Stack underflow.
+    }
+
+	ctx->sp = sp;
+}
+
 // SP0 ( -- sp0 )
 void forth_sp0(forth_runtime_context_t *ctx)
 {
@@ -275,6 +294,25 @@ void forth_sp0(forth_runtime_context_t *ctx)
 void forth_rp_fetch(forth_runtime_context_t *ctx)
 {
 	forth_PUSH(ctx, (forth_cell_t)(ctx->rp));
+}
+
+// RP! ( rp -- )
+void forth_rp_store(forth_runtime_context_t *ctx)
+{
+	forth_cell_t *rp = (forth_cell_t *)forth_POP(ctx);
+
+
+	if (rp < ctx->rp_min)
+    {
+        forth_THROW(ctx, -5); // Return stack overflow.
+    }
+
+	if (rp > ctx->rp_max)
+    {
+        forth_THROW(ctx, -6);  // Return stack underflow.
+    }
+
+	ctx->rp = rp;
 }
 
 // RP0 ( -- rp0 )
@@ -939,6 +977,19 @@ void forth_min(forth_runtime_context_t *ctx)
     forth_scell_t x = (forth_scell_t)forth_POP(ctx);
     
     forth_PUSH(ctx, (forth_cell_t)((x < y) ? x : y));
+}
+
+// Based on the reference implementation
+// : WITHIN ( test low high -- flag ) OVER - >R - R> U< ;
+void forth_within(forth_runtime_context_t *ctx)
+{
+	forth_cell_t tmp;
+	forth_over(ctx);
+	forth_subtract(ctx);
+	tmp = forth_POP(ctx);
+	forth_subtract(ctx);
+	forth_PUSH(ctx, tmp);
+	forth_uless(ctx);
 }
 
 // MAX ( x y -- x|y )
@@ -2243,6 +2294,12 @@ void forth_dot_paren(forth_runtime_context_t *ctx)
     forth_parse(ctx);
     forth_type(ctx);
 }
+
+// \ ( -- )
+void forth_backslash(forth_runtime_context_t *ctx)
+{
+	ctx->to_in = ctx->source_length;
+}
 // ---------------------------------------------------------------------------------------------------------------
 void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 {
@@ -2834,6 +2891,98 @@ void forth_else(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, FORTH_ORIG_MARKER);
 }
 
+// Based on the reference implementation in the DPANS documents.
+// Added exception if refill fails.
+// [ELSE] ( -- )
+void forth_bracket_else(forth_runtime_context_t *ctx)
+{
+	forth_cell_t level = 1;
+	const char *str;
+	forth_cell_t len;
+	
+	do
+	{
+		while(1)
+		{
+			forth_parse_name(ctx);
+			len = forth_POP(ctx);
+			str = (const char *)forth_POP(ctx);
+
+			if (0 == len)
+			{
+				break;
+			}
+
+			if (forth_COMPARE_NAMES("[IF]", str, len))
+			{
+				level++;
+			} else if (forth_COMPARE_NAMES("[ELSE]", str, len))
+			{
+				if (0 != --level)
+				{
+					level++;
+				}
+			} else if (forth_COMPARE_NAMES("[THEN]", str, len))
+			{
+				level--;
+			}
+
+			if (0 == level)
+			{
+				return;
+			}
+		}
+		forth_refill(ctx);
+	} while (0 != forth_POP(ctx));
+	forth_THROW(ctx, -58); // [IF], [ELSE], or [THEN] exception
+}
+
+// [IF] ( flag -- )
+void forth_bracket_if(forth_runtime_context_t *ctx)
+{
+	if (0 == forth_POP(ctx))
+	{
+		forth_bracket_else(ctx);
+	}
+}
+
+#if 0
+// From a juggested 'reference' implementation.
+// CASE ( -- ) C: ( -- case-sys )
+void forth_case(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, 0);
+}
+
+// OF ( x1 x2  -- x1 ) C: ( -- of-sys ) ???
+void forth_of(forth_runtime_context_t *ctx)
+{
+	forth_cell_t count = forth_POP(ctx);
+	count += 1;
+	fort_COMPILE_COMMA(ctx, ); // over
+	fort_COMPILE_COMMA(ctx, ); // =
+	forth_if(ctx);
+	fort_COMPILE_COMMA(ctx, ); // drop
+	forth_PUSH(ctx, count);
+}
+
+void forth_endof(forth_runtime_context_t *ctx)
+{
+	forth_cell_t count = forth_POP(ctx);
+	forth_else(ctx);
+	forth_PUSH(ctx, count);
+}
+
+forth_endcase(forth_runtime_context_t *ctx)
+{
+	forth_cell_t count = forth_POP(ctx);
+	fort_COMPILE_COMMA(ctx, ); // drop
+	while (count--)
+	{
+		forth_then(ctx);
+	}
+}
+#endif
 // BEGIN ( -- ) C: ( -- dest )
 void forth_begin(forth_runtime_context_t *ctx)
 {
@@ -3357,6 +3506,7 @@ const forth_vocabulary_entry_t forth_wl_forth[] =
 {
 DEF_FORTH_WORD("(",  FORTH_XT_FLAGS_IMMEDIATE, forth_paren,         "( -- )"),
 DEF_FORTH_WORD(".(", FORTH_XT_FLAGS_IMMEDIATE, forth_dot_paren,     "( -- )"),
+DEF_FORTH_WORD("\\",  FORTH_XT_FLAGS_IMMEDIATE, forth_backslash,    "( -- )"),
 
 DEF_FORTH_WORD("dup",        0, forth_dup,           "( x -- x x )"),
 DEF_FORTH_WORD("?dup",       0, forth_question_dup,  "( 0 | x -- 0 | x x )"),
@@ -3420,6 +3570,7 @@ DEF_FORTH_WORD("mod",        0, forth_mod,           "( x y -- x%y )"),
 DEF_FORTH_WORD("/mod",       0, forth_div_mod,      "( x y -- m q )"),
 DEF_FORTH_WORD("*/",         0, forth_mult_div,      "( x y z -- q )"),
 DEF_FORTH_WORD("*/mod",      0, forth_mult_div_mod,  "( x y z -- r q )"),
+DEF_FORTH_WORD("within",     0, forth_within,        "( x low high -- flag )"),
 DEF_FORTH_WORD("min",        0, forth_min,           "( x y -- min )"),
 DEF_FORTH_WORD("max",        0, forth_max,           "( x y -- max )"),
 DEF_FORTH_WORD("and",        0, forth_and,           "( x y -- x&y )"),
@@ -3565,12 +3716,17 @@ DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
 DEF_FORTH_WORD( "bye",       0, forth_bye,           "( -- )"),
 DEF_FORTH_WORD("[defined]",   FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_defined, "( \"name\" -- flag )"),
 DEF_FORTH_WORD("[undefined]", FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_undefined, "( \"name\" -- flag )"),
+DEF_FORTH_WORD("[if]",        FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_if,   "( flag -- )"),
+DEF_FORTH_WORD("[else]",      FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_else, "( -- )"),
+DEF_FORTH_WORD("[then]",      FORTH_XT_FLAGS_IMMEDIATE, forth_noop,         "( -- )"),
 DEF_FORTH_WORD( "trace-on",  0, forth_trace_on,      "( -- )"),
 DEF_FORTH_WORD( "trace-off", 0, forth_trace_off,     "( -- )"),
 DEF_FORTH_WORD( "(trace)",   0, forth_paren_trace,   "( -- adr )"),
 DEF_FORTH_WORD( "sp@",  	 0, forth_sp_fetch,      "( -- sp )"),
 DEF_FORTH_WORD( "sp0",  	 0, forth_sp0,      	 "( -- sp0 )"),
+DEF_FORTH_WORD( "sp!",  	 0, forth_sp_store,      "( sp -- )"),
 DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
+DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
 DEF_FORTH_WORD( "forth",  	 0, forth_noop,      	 "Wordlists are not implemented, this word does nothing."),
 DEF_FORTH_WORD( "definitions",0,forth_noop,      	 "Wordlists are not implemented, this word does nothing."),

@@ -41,5 +41,6 @@
 #define FORTH_ALLOW_0X_HEX 1
 
 // #define FORTH_EXCLUDE_DESCRIPTIONS 1
+// #define FORTH_NO_DOUBLES 1
 
 #endif

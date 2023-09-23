@@ -149,6 +149,7 @@ extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx);
 extern void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code);
 extern forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx);
+extern int forth_COMPARE_NAMES(const char *name, const char *input_word, int input_word_length);
 
 extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length);
 
@@ -215,6 +216,7 @@ extern void forth_parse_name(forth_runtime_context_t *ctx);
 extern void forth_quot(forth_runtime_context_t *ctx);
 extern void forth_squot(forth_runtime_context_t *ctx);
 extern void forth_paren(forth_runtime_context_t *ctx);
+extern void forth_backslash(forth_runtime_context_t *ctx);
 extern void forth_dot_paren(forth_runtime_context_t *ctx);
 
 extern void forth_invert(forth_runtime_context_t *ctx);
@@ -223,8 +225,10 @@ extern void forth_abs(forth_runtime_context_t *ctx);
 extern void forth_2mul(forth_runtime_context_t *ctx); 				// 2*
 extern void forth_2div(forth_runtime_context_t *ctx); 				// 2*
 extern void forth_sp_fetch(forth_runtime_context_t *ctx);			// SP@
+extern void forth_sp_store(forth_runtime_context_t *ctx);			// SP!
 extern void forth_sp0(forth_runtime_context_t *ctx);				// SP0
 extern void forth_rp_fetch(forth_runtime_context_t *ctx);			// RP@
+extern void forth_rp_store(forth_runtime_context_t *ctx);			// RP!
 extern void forth_rp0(forth_runtime_context_t *ctx);				// RP0
 extern void forth_depth(forth_runtime_context_t *ctx);
 extern void forth_dup(forth_runtime_context_t *ctx);
@@ -295,6 +299,7 @@ extern void forth_div_mod(forth_runtime_context_t *ctx);			// /MOD
 extern void forth_mult_div_mod(forth_runtime_context_t *ctx);		// */MOD
 extern void forth_mult_div(forth_runtime_context_t *ctx);			// */
 extern void forth_min(forth_runtime_context_t *ctx);
+extern void forth_within(forth_runtime_context_t *ctx);
 extern void forth_max(forth_runtime_context_t *ctx);
 extern void forth_and(forth_runtime_context_t *ctx);
 extern void forth_or(forth_runtime_context_t *ctx);

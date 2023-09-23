@@ -34,7 +34,7 @@
 // if they match (compare the same in a case insensitive comparison).
 // Returns -1 (true) if the names match.
 // Returns 0 (false) if the names do not match.
-int forth_compare_names(const char *name, const char *input_word, int input_word_length)
+int forth_COMPARE_NAMES(const char *name, const char *input_word, int input_word_length)
 {
     int l = strlen(name);
 
@@ -59,7 +59,7 @@ const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t
 
     for (p = list; 0 != p->name; p++)
     {
-        if (forth_compare_names((char *)(p->name), name, name_length))
+        if (forth_COMPARE_NAMES((char *)(p->name), name, name_length))
         {
             return p;
         }
@@ -83,7 +83,7 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
 	{
         if (0 != p->name)
         {
-            if (forth_compare_names((char *)(p->name), name, name_length))
+            if (forth_COMPARE_NAMES((char *)(p->name), name, name_length))
             {
                 return p;
             }  
