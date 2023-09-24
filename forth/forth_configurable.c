@@ -1,9 +1,7 @@
-#ifndef FORTH_H
-#define FORTH_H
 /*
-* forth.h
+* forth_configurable.c
 *
-*  Created on: Jan 30, 2023
+*  Created on: Sep 24, 2023
 *      Author: Andras Zsoter
 *
 * Copyright (c) 2023 Andras Zsoter
@@ -29,10 +27,12 @@
 */
 
 #include <forth_config.h>
+#include <forth.h>
+#include <forth_internal.h>
 
-typedef struct forth_runtime_context forth_runtime_context_t;
-typedef void (*forth_behavior_t)(forth_runtime_context_t *ctx);
-
-extern int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack);
-
-#endif
+// The master list of all arrays that contain (compiled in) entires of Forth words (usually implemented in C).
+const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
+    forth_wl_forth,
+    forth_wl_system,
+    0
+};

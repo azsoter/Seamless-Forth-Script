@@ -33,6 +33,12 @@
 #include <forth.h>
 #include <setjmp.h>
 
+// Well-fromed flags in Forth
+#define FORTH_FALSE ((forth_ucell_t)0)
+#define FORTH_TRUE  (~(forth_ucell_t)0)
+
+#define FORTH_CHAR_SPACE 0x20
+
 struct forth_vocabulary_entry_struct
 {
     forth_cell_t name;
@@ -40,6 +46,9 @@ struct forth_vocabulary_entry_struct
 	forth_cell_t link;
     forth_ucell_t meaning;
 };
+
+typedef struct forth_vocabulary_entry_struct forth_vocabulary_entry_t;
+typedef forth_vocabulary_entry_t *forth_xt_t;
 
 #if defined(FORTH_EXCLUDE_DESCRIPTIONS)
 #define DEF_FORTH_WORD(N, F, M, D)	{ (forth_cell_t)N, F, (forth_ucell_t)0, (forth_ucell_t)M }
@@ -76,7 +85,6 @@ struct forth_runtime_context
 	forth_cell_t	*rp_min;
 	forth_cell_t	*rp0;
 	forth_cell_t	*rp;
-	// forth_xt_t		*ip;
 	forth_cell_t	*ip;
 	forth_cell_t	base;	// Numeric base.
 	forth_cell_t	state;
@@ -122,9 +130,6 @@ struct forth_runtime_context
 #if defined(FORTH_APPLICATION_DEFINED_CONTEXT_FIELDS)
 	FORTH_APPLICATION_DEFINED_CONTEXT_FIELDS
 #endif
-#if defined(FORTH_USER_VARIABLES)
-	forth_cell_t	user[FORTH_USER_VARIABLES];
-#endif
 };
 
 #define FORTH_COLON_SYS_MARKER	0x4e4c4f43
@@ -140,6 +145,8 @@ extern const forth_xt_t forth_drop_xt;
 extern const forth_xt_t forth_over_xt;
 extern const forth_xt_t forth_equals_xt;
 extern const forth_xt_t forth_type_xt;
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
 extern const forth_xt_t forth_COMPILE_COMMA_xt;
 extern const forth_xt_t forth_LIT_xt;
 extern const forth_xt_t forth_XLIT_xt;
@@ -152,6 +159,7 @@ extern const forth_xt_t forth_pLOOP_xt;
 extern const forth_xt_t forth_ppLOOP_xt;
 extern const forth_xt_t forth_pDOES_xt;
 extern const forth_xt_t forth_pABORTq_xt;
+#endif
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
@@ -365,19 +373,23 @@ extern void forth_state(forth_runtime_context_t *ctx);
 extern void forth_to_in(forth_runtime_context_t *ctx); 				// >IN
 extern void forth_source(forth_runtime_context_t *ctx);				// SOURCE
 extern void forth_source_id(forth_runtime_context_t *ctx);			// SOURCE-ID
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
 extern void forth_left_bracket(forth_runtime_context_t *ctx);
 extern void forth_right_bracket(forth_runtime_context_t *ctx);
-
 extern void forth_here(forth_runtime_context_t *ctx);
 extern void forth_unused(forth_runtime_context_t *ctx);
 extern void forth_align(forth_runtime_context_t *ctx);
-extern void forth_aligned(forth_runtime_context_t *ctx);
 extern void forth_allot(forth_runtime_context_t *ctx);
-extern void forth_count(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); 			// C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 			// ,
 extern void forth_postpone(forth_runtime_context_t *ctx);			// POSTPONE
+#endif
 
+extern void forth_aligned(forth_runtime_context_t *ctx);
+extern void forth_count(forth_runtime_context_t *ctx);
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
 extern void forth_case(forth_runtime_context_t *ctx);				// CASE
 extern void forth_of(forth_runtime_context_t *ctx);					// OF
 extern void forth_endof(forth_runtime_context_t *ctx);				// ENDOF
@@ -419,6 +431,8 @@ extern void forth_immediate(forth_runtime_context_t *ctx);
 void forth_latest(forth_runtime_context_t *ctx);
 extern void forth_recurse(forth_runtime_context_t *ctx);
 extern void forth_exit(forth_runtime_context_t *ctx);
+#endif
+
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 

@@ -93,13 +93,6 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
     return p;
 }
 
-// The master list of all arrays that contain (compiled in) entires of Forth words (usually implemented in C).
-const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
-    forth_wl_forth,
-    forth_wl_system,
-    0
-};
-
 // Search all available lists for the name (passed as a c-addr, len pain or the data stack).
 // If the name is found return the corresponding execution token.
 // If the name is not found return 0.
@@ -136,4 +129,86 @@ void forth_find_name(struct forth_runtime_context *ctx)
     // On systems where e.g. flash is cheap and RAM is expensive that would not be good.
 
     forth_PUSH(ctx, (forth_cell_t)ep);
+}
+
+// -----------------------------------------------------------------------------------------------
+//                                    Vocabulary Listings
+// -----------------------------------------------------------------------------------------------
+// HELP ( -- )
+void forth_help(forth_runtime_context_t *ctx)
+{
+	static const char *action = "PCVDT..";
+	const forth_vocabulary_entry_t **wl;// = forth_master_list_of_lists;
+    const forth_vocabulary_entry_t *ep;
+	size_t len;
+	char a;
+
+   	for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
+    {
+    	for (ep = *wl; 0 != ep->name; ep++)
+    	{
+
+			forth_EMIT(ctx, (FORTH_XT_FLAGS_IMMEDIATE & ep->flags) ? 'I' : FORTH_CHAR_SPACE);
+			a = action[FORTH_XT_FLAGS_ACTION_MASK & ep->flags];
+			forth_EMIT(ctx, a);
+			forth_space(ctx);
+        	forth_TYPE0(ctx, (char *)(ep->name));
+#if !defined(FORTH_EXCLUDE_DESCRIPTIONS)
+        	if (0 != ep->link)
+        	{
+				len = strlen((char *)(ep->name));
+				forth_PUSH(ctx, (len < 20) ? (20 - len) : 1);
+				forth_spaces(ctx);
+            	//forth_EMIT(ctx, '\t');
+            	forth_TYPE0(ctx, (char *)(ep->link));
+        	}
+#endif
+        	forth_cr(ctx);
+    	}
+	}
+}
+
+void forth_words(forth_runtime_context_t *ctx)
+{
+    size_t len;
+   	const forth_vocabulary_entry_t *ep;
+    const forth_vocabulary_entry_t **wl = forth_master_list_of_lists;
+
+	if (0 != ctx->dictionary)
+	{
+		for (ep = (forth_vocabulary_entry_t *)(ctx->dictionary->latest); 0 != ep; ep = (forth_vocabulary_entry_t *)(ep->link))
+		{
+			len = strlen((char *)(ep->name));
+
+			if (0 != len)
+			{
+				if ((ctx->terminal_width - ctx->terminal_col) <= len)
+				{
+            		forth_cr(ctx);
+        		}
+
+        		forth_TYPE0(ctx, (char *)(ep->name));
+        		forth_space(ctx);
+			}
+
+		}
+	}
+
+    for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
+    {
+    	for (ep = *wl; 0 != ep->name; ep++)
+    	{
+        	len = strlen((char *)(ep->name));
+
+        	if ((ctx->terminal_width - ctx->terminal_col) <= len)
+			{
+            	forth_cr(ctx);
+        	}
+
+        	forth_TYPE0(ctx, (char *)(ep->name));
+        	forth_space(ctx);
+    	}
+	}
+
+    forth_cr(ctx);
 }

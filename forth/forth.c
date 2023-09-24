@@ -31,7 +31,7 @@
 #include <forth.h>
 #include <forth_internal.h>
 
-#include <stdio.h>
+//#include <stdio.h>
 // ---------------------------------------------------------------------------------------------------------------
 //                                                  STACK Gymnastics, CATCH and THROW
 // ---------------------------------------------------------------------------------------------------------------
@@ -206,6 +206,7 @@ void forth_abort(forth_runtime_context_t *ctx)
     forth_THROW(ctx, -1);
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // (ABORT") ( flag c-addr len -- )
 // A factor of ABORT"
 void forth_pabortq(forth_runtime_context_t *ctx)
@@ -228,6 +229,7 @@ void forth_abort_quote(forth_runtime_context_t *ctx)
 	forth_squot(ctx);
 	forth_COMPILE_COMMA(ctx, forth_pABORTq_xt);
 }
+#endif
 
 // THROW ( code|0 -- )
 void forth_throw(forth_runtime_context_t *ctx)
@@ -2109,6 +2111,7 @@ void forth_quot(forth_runtime_context_t *ctx)
 	forth_parse(ctx);
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // ( c-addr len -- )
 void forth_sliteral(forth_runtime_context_t *ctx)
 {
@@ -2125,16 +2128,19 @@ void forth_sliteral(forth_runtime_context_t *ctx)
 	memmove((void *)here, addr, len);
 	forth_align(ctx);
 }
+#endif
 
 // S" ( <string> -- c-addr u )"
 void forth_squot(forth_runtime_context_t *ctx)
 {
 	forth_quot(ctx);
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 	if (0 != ctx->state)
 	{
 		forth_sliteral(ctx);
 	}
+#endif
 }
 
 // https://forth-standard.org/standard/core/PARSE-NAME
@@ -2347,28 +2353,33 @@ void forth_interpret(forth_runtime_context_t *ctx)
 		xt = (forth_xt_t)forth_POP(ctx);
         if (0 != xt)
         {
+#if !defined(FORTH_WITHOUT_COMPILATION)
 			if ((0 == ctx->state) || (0 != (FORTH_XT_FLAGS_IMMEDIATE & xt->flags)))
 			{
+#endif
             	forth_EXECUTE(ctx, xt);
+#if !defined(FORTH_WITHOUT_COMPILATION)
 			}
 			else
 			{
 				forth_COMPILE_COMMA(ctx, xt);
 			}
+#endif
         }
         else
         {
-            //(void)forth_POP(ctx);
             res = forth_PROCESS_NUMBER(ctx, (const char *)symbol_addr, symbol_len);
-            // forth_dots(ctx);
+ 
             if (0 > res)
             {
                 forth_THROW(ctx, -13); // Undefined word.
             }
-
+#if !defined(FORTH_WITHOUT_COMPILATION)
 			if (0 == ctx->state)
 			{
+#endif
             	forth_drop(ctx);
+#if !defined(FORTH_WITHOUT_COMPILATION)
 			}
 			else
 			{
@@ -2381,6 +2392,7 @@ void forth_interpret(forth_runtime_context_t *ctx)
 					forth_2literal(ctx);
 				}
 			}
+#endif
         }
     }
 }
@@ -2683,6 +2695,7 @@ void forth_source_id(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, ctx->source_id);
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // [ ( -- )
 void forth_left_bracket(forth_runtime_context_t *ctx)
 {
@@ -2694,6 +2707,7 @@ void forth_right_bracket(forth_runtime_context_t *ctx)
 {
 	ctx->state = FORTH_XT_FLAGS_IMMEDIATE;
 }
+#endif
 // ---------------------------------------------------------------------------------------------------------------
 //                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
@@ -2714,6 +2728,7 @@ forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length)
 	dict->dp_max = length;
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // BRANCH ( -- ) Compiled by some words such as ELSE and REPEAT.
 void forth_branch(forth_runtime_context_t *ctx)
 {
@@ -2973,6 +2988,7 @@ void forth_plus_loop(forth_runtime_context_t *ctx)
 	*do_addr = (forth_cell_t)((here + 1) - do_addr);
 	forth_COMMA(ctx, (forth_cell_t)((do_addr + 1) - here));
 }
+#endif
 
 // Interpreter for threaded code.
 void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
@@ -2991,6 +3007,7 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 	ctx->ip = caller_ip;
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // EXIT ( -- )
 // Given the implementation of the inner interpreter (above) in order to exit some threaded code
 // we just need to point ctx->ip to a cell that is set to 0.
@@ -3000,6 +3017,7 @@ void forth_exit(forth_runtime_context_t *ctx)
 	static const forth_cell_t the_end = 0;
 	ctx->ip = (forth_cell_t *)&the_end;
 }
+#endif
 
 // Details of how constants are implemented.
 void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt)
@@ -3030,6 +3048,7 @@ void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt)
 	forth_PUSH(ctx, (forth_cell_t) &(xt->meaning));
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // Compiled by LITERAL
 // ( -- n )
 void forth_lit(forth_runtime_context_t *ctx)
@@ -3114,6 +3133,7 @@ void forth_allot(forth_runtime_context_t *ctx)
 
 	ctx->dictionary->dp = dp;
 }
+#endif
 
 // ALIGN ( -- )
 void forth_align(forth_runtime_context_t *ctx)
@@ -3153,6 +3173,7 @@ void forth_count(forth_runtime_context_t *ctx)
 	forth_PUSH(ctx, (forth_cell_t) c);
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // C, ( c -- )
 void forth_c_comma(forth_runtime_context_t *ctx)
 {
@@ -3274,6 +3295,7 @@ void forth_else(forth_runtime_context_t *ctx)
 	forth_then(ctx);
 	forth_PUSH(ctx, FORTH_ORIG_MARKER);
 }
+#endif
 
 // Based on the reference implementation in the DPANS documents.
 // Added exception if refill fails.
@@ -3330,7 +3352,7 @@ void forth_bracket_if(forth_runtime_context_t *ctx)
 	}
 }
 
-
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // From a juggested 'reference' implementation.
 // CASE ( -- ) C: ( -- case-sys )
 void forth_case(forth_runtime_context_t *ctx)
@@ -3690,6 +3712,7 @@ void forth_does(forth_runtime_context_t *ctx)
 	forth_colon_noname(ctx);
 	forth_nip(ctx);
 }
+#endif
 // ---------------------------------------------------------------------------------------------------------------
 void forth_PRINT_NAME(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -3706,6 +3729,7 @@ void forth_PRINT_NAME(forth_runtime_context_t *ctx, forth_xt_t xt)
 		}
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
 	forth_cell_t *ip;
@@ -3796,6 +3820,29 @@ void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 	forth_EMIT(ctx, ';');
 }
 
+#else
+
+void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_cell_t *ip;
+	forth_xt_t x;
+	forth_cell_t len;
+	forth_cell_t tmp;
+
+	if ((0 == xt->name) || (0 == strlen((const char *)xt->name)))
+	{
+		forth_TYPE0(ctx, ":noname ");
+	}
+	else
+	{
+		forth_TYPE0(ctx, ": ");
+		forth_PRINT_NAME(ctx, xt);
+	}
+
+	forth_TYPE0(ctx, " ... ;");
+}
+#endif
+
 // SEE ( "name" -- )
 void forth_SEE(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -3862,85 +3909,6 @@ void forth_see(forth_runtime_context_t *ctx)
 	forth_SEE(ctx, (forth_xt_t)forth_POP(ctx));
 }
 
-// HELP ( -- )
-void forth_help(forth_runtime_context_t *ctx)
-{
-	static const char *action = "PCVDT..";
-	const forth_vocabulary_entry_t **wl;// = forth_master_list_of_lists;
-    const forth_vocabulary_entry_t *ep;
-	size_t len;
-	char a;
-
-   	for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
-    {
-    	for (ep = *wl; 0 != ep->name; ep++)
-    	{
-
-			forth_EMIT(ctx, (FORTH_XT_FLAGS_IMMEDIATE & ep->flags) ? 'I' : FORTH_CHAR_SPACE);
-			a = action[FORTH_XT_FLAGS_ACTION_MASK & ep->flags];
-			forth_EMIT(ctx, a);
-			forth_space(ctx);
-        	forth_TYPE0(ctx, (char *)(ep->name));
-#if !defined(FORTH_EXCLUDE_DESCRIPTIONS)
-        	if (0 != ep->link)
-        	{
-				len = strlen((char *)(ep->name));
-				forth_PUSH(ctx, (len < 20) ? (20 - len) : 1);
-				forth_spaces(ctx);
-            	//forth_EMIT(ctx, '\t');
-            	forth_TYPE0(ctx, (char *)(ep->link));
-        	}
-#endif
-        	forth_cr(ctx);
-    	}
-	}
-}
-
-void forth_words(forth_runtime_context_t *ctx)
-{
-    size_t len;
-   	const forth_vocabulary_entry_t *ep;
-    const forth_vocabulary_entry_t **wl = forth_master_list_of_lists;
-
-	if (0 != ctx->dictionary)
-	{
-		for (ep = (forth_vocabulary_entry_t *)(ctx->dictionary->latest); 0 != ep; ep = (forth_vocabulary_entry_t *)(ep->link))
-		{
-			len = strlen((char *)(ep->name));
-
-			if (0 != len)
-			{
-				if ((ctx->terminal_width - ctx->terminal_col) <= len)
-				{
-            		forth_cr(ctx);
-        		}
-
-        		forth_TYPE0(ctx, (char *)(ep->name));
-        		forth_space(ctx);
-			}
-
-		}
-	}
-
-    for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
-    {
-    	for (ep = *wl; 0 != ep->name; ep++)
-    	{
-        	len = strlen((char *)(ep->name));
-
-        	if ((ctx->terminal_width - ctx->terminal_col) <= len)
-			{
-            	forth_cr(ctx);
-        	}
-
-        	forth_TYPE0(ctx, (char *)(ep->name));
-        	forth_space(ctx);
-    	}
-	}
-
-    forth_cr(ctx);
-}
-
 // [DEFINED] ( "name" -- flag )
 // True means the word is defined.
 void forth_bracket_defined(forth_runtime_context_t *ctx)
@@ -3971,6 +3939,7 @@ void forth_tick(forth_runtime_context_t *ctx)
     }
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // ['] Compile: ( "name" -- ) Execute: ( -- xt )
 void forth_bracket_tick(forth_runtime_context_t *ctx)
 {
@@ -3984,6 +3953,7 @@ void forth_bracket_tick(forth_runtime_context_t *ctx)
 
 	forth_xliteral(ctx);
 }
+#endif
 
 // CHAR ( "c" -- char )
 void forth_char(forth_runtime_context_t *ctx)
@@ -4000,12 +3970,14 @@ void forth_char(forth_runtime_context_t *ctx)
 	ctx->sp[0] = (forth_cell_t)*p;
 }
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 // [CHAR] Compile ( "char" -- ) Execution ( -- char )
 void forth_bracket_char(forth_runtime_context_t *ctx)
 {
 	forth_char(ctx);
 	forth_literal(ctx);
 }
+#endif
 
 const forth_vocabulary_entry_t forth_wl_forth[] =
 {
@@ -4158,35 +4130,43 @@ DEF_FORTH_WORD("parse",      0, forth_parse,         "( char -- c-addr len )"),
 DEF_FORTH_WORD(">number",    0, forth_to_number,     "( ud c-addr len -- ud1 c-addr1 len1 )"),
 DEF_FORTH_WORD("\"",         0, forth_quot,          "( <string> -- c-addr len )"),
 DEF_FORTH_WORD("s\"", FORTH_XT_FLAGS_IMMEDIATE, forth_squot,     "( <string> -- c-addr len )"),
-DEF_FORTH_WORD(".\"", FORTH_XT_FLAGS_IMMEDIATE, forth_dot_quote, "( <string> -- )"),
+
+
 DEF_FORTH_WORD("parse-name", 0, forth_parse_name,    "( \"name\" -- c-addr len )"),
 DEF_FORTH_WORD("find-name",  0, forth_find_name,     "( c-addr len -- xt|0)"),
+DEF_FORTH_WORD("'",          0, forth_tick,          "( \"name\" -- xt )"),
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
+DEF_FORTH_WORD(".\"", FORTH_XT_FLAGS_IMMEDIATE, forth_dot_quote, "( <string> -- )"),
 DEF_FORTH_WORD("postpone", FORTH_XT_FLAGS_IMMEDIATE, forth_postpone,  "( \"name\" -- )"),
 DEF_FORTH_WORD("[']",FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_tick,  "C: ( \"name\" -- ) R: ( -- xt )"),
-DEF_FORTH_WORD("'",          0, forth_tick,          "( \"name\" -- xt )"),
 DEF_FORTH_WORD("[char]", FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_char, "C:( \"c\" -- ) R: ( -- char )"),
-DEF_FORTH_WORD("char",       0, forth_char,          "( \"c\" -- char )"),
+DEF_FORTH_WORD("[", FORTH_XT_FLAGS_IMMEDIATE, forth_left_bracket,   "Enter interpretation state."),
+DEF_FORTH_WORD("]",      	               0, forth_right_bracket,  "Enter compilation state."),
+DEF_FORTH_WORD("state",      0, forth_state,         "( -- addr )"),
+DEF_FORTH_WORD("here",       0, forth_here,          "( -- addr )"),
+DEF_FORTH_WORD("align",      0, forth_align,         "( --  )"),
+DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
+DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
+DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
+#endif
 
+DEF_FORTH_WORD("char",       0, forth_char,          "( \"c\" -- char )"),
 DEF_FORTH_WORD(".error",     0, forth_print_error,   "( error_code -- )"),
 DEF_FORTH_WORD("noop",       0, forth_noop,          "( -- )"),
 DEF_FORTH_WORD("decimal",    0, forth_decimal,       "( -- )"),
 DEF_FORTH_WORD("hex",    	 0, forth_hex,       	 "( -- )"),
 DEF_FORTH_WORD("base",       0, forth_base,          "( -- addr )"),
 
-DEF_FORTH_WORD("[", FORTH_XT_FLAGS_IMMEDIATE, forth_left_bracket,   "Enter interpretation state."),
-DEF_FORTH_WORD("]",      	               0, forth_right_bracket,  "Enter compilation state."),
-
-DEF_FORTH_WORD("state",      0, forth_state,         "( -- addr )"),
-DEF_FORTH_WORD("here",       0, forth_here,          "( -- addr )"),
+#if !defined(FORTH_WITHOUT_COMPILATION)
 DEF_FORTH_WORD("pad",        0, forth_here,          "( -- addr )"),
 DEF_FORTH_WORD("unused",     0, forth_unused,        "( -- u )"),
+#endif
+
 DEF_FORTH_WORD("aligned",    0, forth_aligned,       "( addr -- a-addr )"),
-DEF_FORTH_WORD("align",      0, forth_align,         "( --  )"),
-DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
-DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
-DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
 DEF_FORTH_WORD("count",      0, forth_count,         "( c_addr -- c_addr+1 c )"),
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 DEF_FORTH_WORD("ahead", FORTH_XT_FLAGS_IMMEDIATE, forth_ahead,   "( -- )"),
 DEF_FORTH_WORD("if",    FORTH_XT_FLAGS_IMMEDIATE, forth_if,   "( flag -- )"),
 DEF_FORTH_WORD("else",  FORTH_XT_FLAGS_IMMEDIATE, forth_else, "( -- )"),
@@ -4196,7 +4176,6 @@ DEF_FORTH_WORD("again", FORTH_XT_FLAGS_IMMEDIATE, forth_again, "( -- )"),
 DEF_FORTH_WORD("until", FORTH_XT_FLAGS_IMMEDIATE, forth_until, "( f -- )"),
 DEF_FORTH_WORD("while", FORTH_XT_FLAGS_IMMEDIATE, forth_while, "( f -- )"),
 DEF_FORTH_WORD("repeat",FORTH_XT_FLAGS_IMMEDIATE, forth_repeat, "( -- )"),
-DEF_FORTH_WORD("exit",		 0, forth_exit,           "( -- )"),
 
 DEF_FORTH_WORD("case",   FORTH_XT_FLAGS_IMMEDIATE, forth_case,    "( -- )"),
 DEF_FORTH_WORD("of",     FORTH_XT_FLAGS_IMMEDIATE, forth_of,      "( x1 x2  -- x1 )"),
@@ -4229,6 +4208,8 @@ DEF_FORTH_WORD(">body",      0, forth_to_body,       "( xt -- addr )"),
 DEF_FORTH_WORD("does>",  FORTH_XT_FLAGS_IMMEDIATE, forth_does, "( -- )"),
 DEF_FORTH_WORD("cs-pick",	 0, forth_cspick,		 "Pick for the control-flow stack."),
 DEF_FORTH_WORD("cs-roll",	 0, forth_csroll,		 "Roll for the control-flow stack."),
+DEF_FORTH_WORD("exit",		 0, forth_exit,           "( -- )"),
+#endif
 
 DEF_FORTH_WORD("bl", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_CHAR_SPACE, "( -- space )"),
 
@@ -4236,7 +4217,11 @@ DEF_FORTH_WORD("execute",    0, forth_execute,       "( xt -- )"),
 DEF_FORTH_WORD("catch",      0, forth_catch,         "( xt -- code )"),
 DEF_FORTH_WORD("throw",      0, forth_throw,         "( code -- )"),
 DEF_FORTH_WORD("abort",      0, forth_abort,         "( -- )"),
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
 DEF_FORTH_WORD("abort\"",     FORTH_XT_FLAGS_IMMEDIATE, forth_abort_quote,    "( flag -- )"),
+#endif
+
 DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
 DEF_FORTH_WORD("evaluate",   0, forth_evaluate,		 "( c-addr len -- )"),
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
@@ -4275,6 +4260,7 @@ DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- )"),							//  1
 DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),					//  2
 DEF_FORTH_WORD("=",          0, forth_equals,        "( x y -- flag )"),					//  3
 DEF_FORTH_WORD("type",       0, forth_type,          "( addr count -- )"),					//  4
+#if !defined(FORTH_WITHOUT_COMPILATION)
 DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),							//  5
 DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),							//  6
 DEF_FORTH_WORD("XLIT",       0, forth_lit,           "( -- n )" ),							//  7
@@ -4287,6 +4273,7 @@ DEF_FORTH_WORD("(LOOP)",	 0, forth_loop_rt,		 " ( -- )"),							// 13
 DEF_FORTH_WORD("(+LOOP)",	 0, forth_plus_loop_rt,	 " ( inc -- )"),						// 14
 DEF_FORTH_WORD("(does>)",    0, forth_p_does,        "( -- )"),								// 15
 DEF_FORTH_WORD("(abort\")",  0, forth_pabortq,       "( f c-addr len -- )"),				// 16
+#endif
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
@@ -4297,6 +4284,7 @@ const forth_xt_t forth_drop_xt 				= (const forth_xt_t)&(forth_wl_system[1]);
 const forth_xt_t forth_over_xt 				= (const forth_xt_t)&(forth_wl_system[2]);
 const forth_xt_t forth_equals_xt 			= (const forth_xt_t)&(forth_wl_system[3]);
 const forth_xt_t forth_type_xt 				= (const forth_xt_t)&(forth_wl_system[4]);
+#if !defined(FORTH_WITHOUT_COMPILATION)
 const forth_xt_t forth_COMPILE_COMMA_xt		= (const forth_xt_t)&(forth_wl_system[5]);
 const forth_xt_t forth_LIT_xt				= (const forth_xt_t)&(forth_wl_system[6]);
 const forth_xt_t forth_XLIT_xt				= (const forth_xt_t)&(forth_wl_system[7]);
@@ -4309,6 +4297,7 @@ const forth_xt_t forth_pLOOP_xt				= (const forth_xt_t)&(forth_wl_system[13]);
 const forth_xt_t forth_ppLOOP_xt			= (const forth_xt_t)&(forth_wl_system[14]);
 const forth_xt_t forth_pDOES_xt				= (const forth_xt_t)&(forth_wl_system[15]);
 const forth_xt_t forth_pABORTq_xt			= (const forth_xt_t)&(forth_wl_system[16]);
+#endif
 // -----------------------------------------------------------------------------------------------
 
 // Interpret the text in CMD.

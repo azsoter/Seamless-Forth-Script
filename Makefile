@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS+= -O3 -Itest-app -Iforth -MMD
 # LDFLAGS=-pthread
 
-OBJ = main.o forth.o forth_search.o forth_stdio.o
+OBJ = main.o forth.o forth_search.o forth_configurable.o forth_stdio.o
 
 default: test
 
