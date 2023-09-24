@@ -1,4 +1,12 @@
 # Seamless-Forth-Script
  A Forth based scripting language that integrates seamlessly with C.
-WORK IN PROGRESS, it is not even close to being usable.
+
+You can check out my other forth project at https://github.com/azsoter/forth-devel
+which is a plasing to a Forth programmer, but as it turns out it is somewhat clumsy
+to integrate with C code where lots of functions need to be called from Forth.
+This version is perhaps less elegant as a Forth system, but should integrate more seamlessly
+with C code.
+
+The idea here is to add live scripting to embedded program written in C, not to implement
+entire systems in Forth.
 

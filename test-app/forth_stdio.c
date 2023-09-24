@@ -106,8 +106,6 @@ static forth_cell_t ekey_to_char(struct forth_runtime_context *rctx, forth_cell_
 	return ek >> 8;
 }
 
-#define SEARCH_ORDER_SIZE 32 /* Perhaps move this to some header file at one point. */
-
 forth_dictionary_t *dict = 0;
 
 int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, const char *cmd)
@@ -117,11 +115,11 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 	forth_cell_t *sp;
 	forth_cell_t *rp;
 	forth_cell_t *search_order;
-	forth_cell_t size = sizeof(struct forth_runtime_context) + sizeof(forth_cell_t) * (dstack_cells + rstack_cells + (SEARCH_ORDER_SIZE));
+	forth_cell_t size = sizeof(struct forth_runtime_context) + sizeof(forth_cell_t) * (dstack_cells + rstack_cells);
 
 	if (0 == dict)
 	{
-		dict = forth_INIT_DICTIONARY(dictionary, sizeof(dictionary));
+		dict = forth_InitDictionary(dictionary, sizeof(dictionary));
 	}
 
     char *ctx = alloca(size);
@@ -136,12 +134,13 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
     rctx = (struct forth_runtime_context *)ctx;
     sp = (forth_cell_t *)(rctx + 1);
     rp = sp + dstack_cells;
-#if 0
-    search_order = rp + rstack_cells;
-#endif
-#if 0
-    rctx->dictionary = dictionary;
-#endif
+
+	if (0 != forth_InitContext(rctx, sp, rp - 1, rp, (rp + rstack_cells) - 1))
+	{
+		return -1;
+	}
+
+	/*
     rctx->sp0 = rp - 1;
     rctx->sp = rctx->sp0;
     rctx->sp_max = rctx->sp0;
@@ -153,20 +152,9 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
    	rctx->rp_min = rp;
 
    	rctx->throw_handler = 0;
-#if 0
-   	rctx->ip = 0;
-#endif
-    rctx->base = 10;
 
-#if 0
-    rctx->wordlists = search_order;
-   	rctx->wordlist_slots = (SEARCH_ORDER_SIZE);
-   	rctx->wordlist_cnt = 2;
-   	search_order[(SEARCH_ORDER_SIZE) - 1] = FORTH_WID_Root_WORDLIST;
-   	search_order[(SEARCH_ORDER_SIZE) - 2] = FORTH_WID_FORTH_WORDLIST;
-    rctx->current = FORTH_WID_FORTH_WORDLIST;
-    // r_ctx.wordlist_cnt =
-#endif
+    rctx->base = 10;
+	*/
     		
    	rctx->terminal_width = 80;
    	rctx->terminal_height = 25;
@@ -193,10 +181,7 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 #endif
 
 	rctx->dictionary = dict;
-
     res = forth(rctx, cmd, strlen(cmd), 1);
-
-//   	free(ctx);
     return res;
 }
 // ------------------------------------------------------------------------------------------------

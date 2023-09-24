@@ -91,6 +91,7 @@ struct forth_runtime_context
 	forth_cell_t	throw_handler;
 	forth_cell_t	bye_handler;
 	forth_cell_t	quit_handler;
+	forth_cell_t	user_break;			// The user has pressed CTRL-C.....
 	forth_cell_t	abort_msg_len;		// Used by ABORT"
 	forth_cell_t	abort_msg_addr;		// Used by ABORT"
 	forth_cell_t	blk;		// BLK
@@ -161,7 +162,8 @@ extern const forth_xt_t forth_pDOES_xt;
 extern const forth_xt_t forth_pABORTq_xt;
 #endif
 
-extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
+extern forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length);
+extern int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth_cell_t *sp_max, forth_cell_t *rp_min, forth_cell_t *rp_max);
 
 extern void forth_PRINT_TRACE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);

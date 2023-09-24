@@ -142,6 +142,12 @@ void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt)
 		forth_PRINT_TRACE(ctx, xt);
 	}
 
+	if (ctx->user_break) // Used has pressed break.
+	{
+		ctx->user_break = 0; // Delete the indicator.
+		forth_THROW(ctx, -28); // User interrupt. 
+	}
+
     switch((uint8_t)(xt->flags & FORTH_XT_FLAGS_ACTION_MASK))
 	{
 		case FORTH_XT_FLAGS_ACTION_PRIMITIVE:
@@ -1303,7 +1309,12 @@ void forth_TYPE0(forth_runtime_context_t *ctx, const char *str)
 	}
 
 	res = ctx->write_string(ctx, str, len);
-    // **TODO** Should we do a throw if failed????
+    /* Just ignore errors here for now........
+	if (0 > res)
+    {
+        forth_THROW(ctx, -57);
+    }
+	*/
 }
 
 void forth_EMIT(forth_runtime_context_t *ctx, char c)
@@ -2711,7 +2722,7 @@ void forth_right_bracket(forth_runtime_context_t *ctx)
 // ---------------------------------------------------------------------------------------------------------------
 //                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
-forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length)
+forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 {
 	forth_dictionary_t *dict;
 
@@ -4300,6 +4311,32 @@ const forth_xt_t forth_pABORTq_xt			= (const forth_xt_t)&(forth_wl_system[16]);
 #endif
 // -----------------------------------------------------------------------------------------------
 
+int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth_cell_t *sp_max, forth_cell_t *rp_min, forth_cell_t *rp_max)
+{
+	if ((0 == ctx) || (0 == sp_min) || (0 == sp_max) || (0 == rp_min) || (0 == rp_max))
+	{
+		return -1;
+	}
+	
+	memset(ctx, 0, sizeof(forth_runtime_context_t));
+
+	ctx->base = 10;			// Set base to decimal.
+	ctx->ip = 0;
+	ctx->sp_max = sp_max;
+	ctx->sp_min = sp_min;
+	ctx->sp0    = sp_max;
+	ctx->sp     = sp_max;
+
+	ctx->rp_max = rp_max;
+	ctx->rp_min = rp_min;
+	ctx->rp0    = rp_max;
+	ctx->rp     = rp_max;
+
+	forth_less_hash(ctx);	// Initialize the number formatting buffer so accidentally typed in HOLD, etc. does not crash.
+
+	return 0;
+}
+
 // Interpret the text in CMD.
 // The command is passed as address and length (so we can interpret substrings inside some bigger buffer).
 // A flag is passed to indicate if the data stack in the context needs to be emtied before running the command.
@@ -4339,19 +4376,13 @@ int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length
         ctx->sp = ctx->sp0;
     }
 
-#if 0
-    cmd = " 1 2 3 4 xxx";
-    cmd_length = strlen(cmd);
-#endif
     ctx->to_in = 0;
     ctx->source_address = cmd;
     ctx->source_length = cmd_length;
 	ctx->source_id = -1;
 	ctx->blk = 0;
-	forth_less_hash(ctx);	// Initialize the number formatting buffer so accidentally typed in HOLD, etc. does not crash.
-    res = forth_RUN_INTERPRET(ctx);
 
-    // forth_DOTS(ctx);
+    res = forth_RUN_INTERPRET(ctx);
 
     return (int)res;
 }
