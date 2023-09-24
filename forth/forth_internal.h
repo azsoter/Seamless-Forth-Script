@@ -140,6 +140,7 @@ extern const forth_xt_t forth_drop_xt;
 extern const forth_xt_t forth_over_xt;
 extern const forth_xt_t forth_equals_xt;
 extern const forth_xt_t forth_type_xt;
+extern const forth_xt_t forth_COMPILE_COMMA_xt;
 extern const forth_xt_t forth_LIT_xt;
 extern const forth_xt_t forth_XLIT_xt;
 extern const forth_xt_t forth_SLIT_xt;
@@ -150,6 +151,7 @@ extern const forth_xt_t forth_pqDO_xt;
 extern const forth_xt_t forth_pLOOP_xt;
 extern const forth_xt_t forth_ppLOOP_xt;
 extern const forth_xt_t forth_pDOES_xt;
+extern const forth_xt_t forth_pABORTq_xt;
 
 extern forth_dictionary_t *forth_INIT_DICTIONARY(void *addr, forth_cell_t length);
 
@@ -192,6 +194,7 @@ extern void forth_paren_trace(forth_runtime_context_t *ctx); 		// (TRACE)
 extern void forth_catch(forth_runtime_context_t *ctx);
 extern void forth_throw(forth_runtime_context_t *ctx);
 extern void forth_abort(forth_runtime_context_t *ctx);
+extern void forth_abort_quote(forth_runtime_context_t *ctx);
 extern void forth_print_error(forth_runtime_context_t *ctx);
 extern void forth_type(forth_runtime_context_t *ctx);
 extern void forth_emit(forth_runtime_context_t *ctx);
@@ -373,6 +376,7 @@ extern void forth_allot(forth_runtime_context_t *ctx);
 extern void forth_count(forth_runtime_context_t *ctx);
 extern void forth_c_comma(forth_runtime_context_t *ctx); 			// C,
 extern void forth_comma(forth_runtime_context_t *ctx);	 			// ,
+extern void forth_postpone(forth_runtime_context_t *ctx);			// POSTPONE
 
 extern void forth_case(forth_runtime_context_t *ctx);				// CASE
 extern void forth_of(forth_runtime_context_t *ctx);					// OF

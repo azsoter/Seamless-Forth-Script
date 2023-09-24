@@ -206,6 +206,29 @@ void forth_abort(forth_runtime_context_t *ctx)
     forth_THROW(ctx, -1);
 }
 
+// (ABORT") ( flag c-addr len -- )
+// A factor of ABORT"
+void forth_pabortq(forth_runtime_context_t *ctx)
+{
+	forth_cell_t len = forth_POP(ctx);
+	forth_cell_t addr = forth_POP(ctx);
+	forth_cell_t f = forth_POP(ctx);
+
+	if (0 != f)
+	{
+		ctx->abort_msg_addr = addr;
+		ctx->abort_msg_len = len;
+    	forth_THROW(ctx, -2);
+	}
+}
+
+// ABORT" ( flag -- )
+void forth_abort_quote(forth_runtime_context_t *ctx)
+{
+	forth_squot(ctx);
+	forth_COMPILE_COMMA(ctx, forth_pABORTq_xt);
+}
+
 // THROW ( code|0 -- )
 void forth_throw(forth_runtime_context_t *ctx)
 {
@@ -3188,6 +3211,26 @@ void forth_comma(forth_runtime_context_t *ctx)
 	forth_COMMA(ctx, x);
 }
 
+// POSTPONE ( "name" -- )
+void forth_postpone(forth_runtime_context_t *ctx)
+{
+	forth_xt_t xt;
+
+	forth_tick(ctx);
+	xt = (forth_xt_t)forth_POP(ctx);
+
+	if (0 != (FORTH_XT_FLAGS_IMMEDIATE & xt->flags)) // Word is immediate.
+	{
+		forth_COMPILE_COMMA(ctx, xt);
+	}
+	else
+	{
+		forth_COMPILE_COMMA(ctx, forth_XLIT_xt);
+		forth_COMMA(ctx, (forth_cell_t)xt);
+		forth_COMPILE_COMMA(ctx, forth_COMPILE_COMMA_xt);
+	}
+}
+
 // AHEAD ( -- ) C: ( -- orig )
 void forth_ahead(forth_runtime_context_t *ctx)
 {
@@ -4118,6 +4161,7 @@ DEF_FORTH_WORD("s\"", FORTH_XT_FLAGS_IMMEDIATE, forth_squot,     "( <string> -- 
 DEF_FORTH_WORD(".\"", FORTH_XT_FLAGS_IMMEDIATE, forth_dot_quote, "( <string> -- )"),
 DEF_FORTH_WORD("parse-name", 0, forth_parse_name,    "( \"name\" -- c-addr len )"),
 DEF_FORTH_WORD("find-name",  0, forth_find_name,     "( c-addr len -- xt|0)"),
+DEF_FORTH_WORD("postpone", FORTH_XT_FLAGS_IMMEDIATE, forth_postpone,  "( \"name\" -- )"),
 DEF_FORTH_WORD("[']",FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_tick,  "C: ( \"name\" -- ) R: ( -- xt )"),
 DEF_FORTH_WORD("'",          0, forth_tick,          "( \"name\" -- xt )"),
 DEF_FORTH_WORD("[char]", FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_char, "C:( \"c\" -- ) R: ( -- char )"),
@@ -4141,7 +4185,6 @@ DEF_FORTH_WORD("align",      0, forth_align,         "( --  )"),
 DEF_FORTH_WORD("allot",      0, forth_allot,       	 "( n --  )"),
 DEF_FORTH_WORD("c,",      	 0, forth_c_comma,       "( c --  )"),
 DEF_FORTH_WORD(",",      	 0, forth_comma,         "( x --  )"),
-DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),
 DEF_FORTH_WORD("count",      0, forth_count,         "( c_addr -- c_addr+1 c )"),
 
 DEF_FORTH_WORD("ahead", FORTH_XT_FLAGS_IMMEDIATE, forth_ahead,   "( -- )"),
@@ -4160,14 +4203,14 @@ DEF_FORTH_WORD("of",     FORTH_XT_FLAGS_IMMEDIATE, forth_of,      "( x1 x2  -- x
 DEF_FORTH_WORD("endof",  FORTH_XT_FLAGS_IMMEDIATE, forth_endof,   "( -- )"),
 DEF_FORTH_WORD("endcase",FORTH_XT_FLAGS_IMMEDIATE, forth_endcase, "( x -- )"),
 
-DEF_FORTH_WORD("do",    FORTH_XT_FLAGS_IMMEDIATE, forth_do,     "( limit start -- )"),
-DEF_FORTH_WORD("?do",   FORTH_XT_FLAGS_IMMEDIATE, forth_q_do,   "( limit start -- )"),
+DEF_FORTH_WORD("do",        FORTH_XT_FLAGS_IMMEDIATE, forth_do,     "( limit start -- )"),
+DEF_FORTH_WORD("?do",       FORTH_XT_FLAGS_IMMEDIATE, forth_q_do,   "( limit start -- )"),
 DEF_FORTH_WORD("i",     	0, forth_i,                         "( -- i )"),
 DEF_FORTH_WORD("j",     	0, forth_j,                         "( -- j )"),
 DEF_FORTH_WORD("unloop",	0, forth_unloop,                    "( -- )"),
 DEF_FORTH_WORD("leave",		0, forth_leave,                     "( -- )"),
-DEF_FORTH_WORD("loop",  FORTH_XT_FLAGS_IMMEDIATE, forth_loop,	"( -- )"),
-DEF_FORTH_WORD("+loop", FORTH_XT_FLAGS_IMMEDIATE, forth_plus_loop, "( inc -- )"),
+DEF_FORTH_WORD("loop",      FORTH_XT_FLAGS_IMMEDIATE, forth_loop,	"( -- )"),
+DEF_FORTH_WORD("+loop",     FORTH_XT_FLAGS_IMMEDIATE, forth_plus_loop, "( inc -- )"),
 
 DEF_FORTH_WORD("literal",  FORTH_XT_FLAGS_IMMEDIATE, forth_literal,       "( x --  )"),
 DEF_FORTH_WORD("xliteral", FORTH_XT_FLAGS_IMMEDIATE, forth_xliteral,      "( xt --  )"),
@@ -4192,6 +4235,8 @@ DEF_FORTH_WORD("bl", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_CHAR_SPACE, "( -- spa
 DEF_FORTH_WORD("execute",    0, forth_execute,       "( xt -- )"),
 DEF_FORTH_WORD("catch",      0, forth_catch,         "( xt -- code )"),
 DEF_FORTH_WORD("throw",      0, forth_throw,         "( code -- )"),
+DEF_FORTH_WORD("abort",      0, forth_abort,         "( -- )"),
+DEF_FORTH_WORD("abort\"",     FORTH_XT_FLAGS_IMMEDIATE, forth_abort_quote,    "( flag -- )"),
 DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
 DEF_FORTH_WORD("evaluate",   0, forth_evaluate,		 "( c-addr len -- )"),
 DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
@@ -4226,40 +4271,44 @@ DEF_FORTH_WORD(0, 0, 0, 0)
 const forth_vocabulary_entry_t forth_wl_system[] =
 {
 DEF_FORTH_WORD("interpret",  0, forth_interpret,     "( -- )" ),							//  0
-DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- )"),							//  1,
-DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),					//  2,
-DEF_FORTH_WORD("=",          0, forth_equals,        "( x y -- flag )"),					//  3,
+DEF_FORTH_WORD("drop",       0, forth_drop,          "( x -- )"),							//  1
+DEF_FORTH_WORD("over",       0, forth_over,          "( x y -- x y x )"),					//  2
+DEF_FORTH_WORD("=",          0, forth_equals,        "( x y -- flag )"),					//  3
 DEF_FORTH_WORD("type",       0, forth_type,          "( addr count -- )"),					//  4
-DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),							//  5
-DEF_FORTH_WORD("XLIT",       0, forth_lit,           "( -- n )" ),							//  6
-DEF_FORTH_WORD("SLIT",       0, forth_slit,          "( -- c-addr len )" ),					//  7
-DEF_FORTH_WORD("BRANCH",	 0, forth_branch,		 " ( -- )"),							//  8
-DEF_FORTH_WORD("0BRANCH",	 0, forth_0branch,		 " ( flag -- )"),						//  9
-DEF_FORTH_WORD("(DO)",	     0, forth_do_rt,		 " ( limit start -- )"),				// 10
-DEF_FORTH_WORD("(?DO)",	     0, forth_qdo_rt,		 " ( limit start -- )"),				// 11
-DEF_FORTH_WORD("(LOOP)",	 0, forth_loop_rt,		 " ( -- )"),							// 12
-DEF_FORTH_WORD("(+LOOP)",	 0, forth_plus_loop_rt,	 " ( inc -- )"),						// 13
-DEF_FORTH_WORD("(does>)",    0, forth_p_does,        "( -- )"),								// 14
+DEF_FORTH_WORD("compile,",   0, forth_comma,         "( xt --  )"),							//  5
+DEF_FORTH_WORD("LIT",        0, forth_lit,           "( -- n )" ),							//  6
+DEF_FORTH_WORD("XLIT",       0, forth_lit,           "( -- n )" ),							//  7
+DEF_FORTH_WORD("SLIT",       0, forth_slit,          "( -- c-addr len )" ),					//  8
+DEF_FORTH_WORD("BRANCH",	 0, forth_branch,		 " ( -- )"),							//  9
+DEF_FORTH_WORD("0BRANCH",	 0, forth_0branch,		 " ( flag -- )"),						// 10
+DEF_FORTH_WORD("(DO)",	     0, forth_do_rt,		 " ( limit start -- )"),				// 11
+DEF_FORTH_WORD("(?DO)",	     0, forth_qdo_rt,		 " ( limit start -- )"),				// 12
+DEF_FORTH_WORD("(LOOP)",	 0, forth_loop_rt,		 " ( -- )"),							// 13
+DEF_FORTH_WORD("(+LOOP)",	 0, forth_plus_loop_rt,	 " ( inc -- )"),						// 14
+DEF_FORTH_WORD("(does>)",    0, forth_p_does,        "( -- )"),								// 15
+DEF_FORTH_WORD("(abort\")",  0, forth_pabortq,       "( f c-addr len -- )"),				// 16
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
 // These refer to items in the array above, if you change one you are likely need to change the other.
 //
-const forth_xt_t forth_interpret_xt = (const forth_xt_t)&(forth_wl_system[0]);
-const forth_xt_t forth_drop_xt 		= (const forth_xt_t)&(forth_wl_system[1]);
-const forth_xt_t forth_over_xt 		= (const forth_xt_t)&(forth_wl_system[2]);
-const forth_xt_t forth_equals_xt 	= (const forth_xt_t)&(forth_wl_system[3]);
-const forth_xt_t forth_type_xt 		= (const forth_xt_t)&(forth_wl_system[4]);
-const forth_xt_t forth_LIT_xt		= (const forth_xt_t)&(forth_wl_system[5]);
-const forth_xt_t forth_XLIT_xt		= (const forth_xt_t)&(forth_wl_system[6]);
-const forth_xt_t forth_SLIT_xt		= (const forth_xt_t)&(forth_wl_system[7]);
-const forth_xt_t forth_BRANCH_xt	= (const forth_xt_t)&(forth_wl_system[8]);
-const forth_xt_t forth_0BRANCH_xt	= (const forth_xt_t)&(forth_wl_system[9]);
-const forth_xt_t forth_pDO_xt		= (const forth_xt_t)&(forth_wl_system[10]);
-const forth_xt_t forth_pqDO_xt		= (const forth_xt_t)&(forth_wl_system[11]);
-const forth_xt_t forth_pLOOP_xt		= (const forth_xt_t)&(forth_wl_system[12]);
-const forth_xt_t forth_ppLOOP_xt	= (const forth_xt_t)&(forth_wl_system[13]);
-const forth_xt_t forth_pDOES_xt		= (const forth_xt_t)&(forth_wl_system[14]);
+const forth_xt_t forth_interpret_xt 		= (const forth_xt_t)&(forth_wl_system[0]);
+const forth_xt_t forth_drop_xt 				= (const forth_xt_t)&(forth_wl_system[1]);
+const forth_xt_t forth_over_xt 				= (const forth_xt_t)&(forth_wl_system[2]);
+const forth_xt_t forth_equals_xt 			= (const forth_xt_t)&(forth_wl_system[3]);
+const forth_xt_t forth_type_xt 				= (const forth_xt_t)&(forth_wl_system[4]);
+const forth_xt_t forth_COMPILE_COMMA_xt		= (const forth_xt_t)&(forth_wl_system[5]);
+const forth_xt_t forth_LIT_xt				= (const forth_xt_t)&(forth_wl_system[6]);
+const forth_xt_t forth_XLIT_xt				= (const forth_xt_t)&(forth_wl_system[7]);
+const forth_xt_t forth_SLIT_xt				= (const forth_xt_t)&(forth_wl_system[8]);
+const forth_xt_t forth_BRANCH_xt			= (const forth_xt_t)&(forth_wl_system[9]);
+const forth_xt_t forth_0BRANCH_xt			= (const forth_xt_t)&(forth_wl_system[10]);
+const forth_xt_t forth_pDO_xt				= (const forth_xt_t)&(forth_wl_system[11]);
+const forth_xt_t forth_pqDO_xt				= (const forth_xt_t)&(forth_wl_system[12]);
+const forth_xt_t forth_pLOOP_xt				= (const forth_xt_t)&(forth_wl_system[13]);
+const forth_xt_t forth_ppLOOP_xt			= (const forth_xt_t)&(forth_wl_system[14]);
+const forth_xt_t forth_pDOES_xt				= (const forth_xt_t)&(forth_wl_system[15]);
+const forth_xt_t forth_pABORTq_xt			= (const forth_xt_t)&(forth_wl_system[16]);
 // -----------------------------------------------------------------------------------------------
 
 // Interpret the text in CMD.
