@@ -2737,6 +2737,8 @@ forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 	dict->dp = 0;
 	length -= FORTH_ALIGN(sizeof(forth_dictionary_t));
 	dict->dp_max = length;
+
+	return dict;
 }
 
 #if !defined(FORTH_WITHOUT_COMPILATION)

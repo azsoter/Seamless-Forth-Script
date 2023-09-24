@@ -53,8 +53,10 @@ typedef forth_udcell_t forth_dcell_t;
 
 typedef int32_t  forth_scell_t;
 typedef uint32_t forth_ucell_t;
-typedef uint64_t forth_dcell_t;
+typedef uint64_t forth_udcell_t;
 typedef int64_t  forth_sdcell_t;
+
+typedef forth_udcell_t forth_dcell_t;
 
 #define FORTH_CELL_HEX_DIGITS 8
 
