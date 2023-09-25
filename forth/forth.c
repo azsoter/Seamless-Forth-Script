@@ -2969,6 +2969,21 @@ void forth_set_order(forth_runtime_context_t *ctx)
 	}
 }
 
+// WORDLIST ( -- wid )
+void forth_wordlist(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	forth_align(ctx);
+	forth_here(ctx);
+	forth_COMMA(ctx, 0);									// latest
+	forth_COMMA(ctx, (forth_cell_t)forth_GET_LATEST(ctx));	// parent
+	forth_COMMA(ctx, 0);									// name
+}
+
 // BRANCH ( -- ) Compiled by some words such as ELSE and REPEAT.
 void forth_branch(forth_runtime_context_t *ctx)
 {
@@ -3885,7 +3900,14 @@ forth_vocabulary_entry_t *forth_GET_LATEST(forth_runtime_context_t *ctx)
 	}
 
 	//return (forth_vocabulary_entry_t *)(ctx->dictionary->latest);
+	if (0 != ctx->current)
+	{
+		return (forth_vocabulary_entry_t *)(((forth_wordlist_t *)(ctx->current))->latest);
+	}
+	
+	// If all else fails just default to Forth.
 	return (forth_vocabulary_entry_t *)(ctx->dictionary->forth_wl.latest);
+
 }
 
 void forth_SET_LATEST(forth_runtime_context_t *ctx, forth_vocabulary_entry_t *token)
@@ -3895,8 +3917,14 @@ void forth_SET_LATEST(forth_runtime_context_t *ctx, forth_vocabulary_entry_t *to
 		forth_THROW(ctx, -21); // 	unsupported operation
 	}
 
+	if (0 == ctx->current)
+	{
+		forth_THROW(ctx, -51); // 	compilation word list changed
+	}
+
+	((forth_wordlist_t *)(ctx->current))->latest = (forth_cell_t)token;
 	//ctx->dictionary->latest = (forth_cell_t)token;
-	ctx->dictionary->forth_wl.latest = (forth_cell_t)token;
+	//ctx->dictionary->forth_wl.latest = (forth_cell_t)token;
 }
 
 // LATEST ( -- addr )
@@ -4505,6 +4533,7 @@ DEF_FORTH_WORD("words",      		0, forth_words,         				"( -- )"),
 #if !defined(FORTH_WITHOUT_COMPILATION)
 DEF_FORTH_WORD( "definitions",		0, forth_definitions,      	 			"( -- )"),
 DEF_FORTH_WORD("forth-wordlist",	0, forth_forth_wordlist,     			"( -- wid )" ),
+DEF_FORTH_WORD("wordlist",			0, forth_wordlist,     					"( -- wid )" ),
 DEF_FORTH_WORD("order",  			0, forth_order,                       	"( -- )" ),
 DEF_FORTH_WORD("only",   			0, forth_only,                        	"( -- )" ),
 DEF_FORTH_WORD("also",   			0, forth_also,                        	"( -- )" ),

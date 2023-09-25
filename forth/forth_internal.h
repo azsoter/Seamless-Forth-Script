@@ -178,7 +178,20 @@ extern const forth_xt_t forth_pABORTq_xt;
 
 extern forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length);
 extern int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots);
+extern void forth_forth_wordlist(forth_runtime_context_t *ctx);
+extern void forth_get_current(forth_runtime_context_t *ctx);
+extern void forth_set_current(forth_runtime_context_t *ctx);
+extern void forth_definitions(forth_runtime_context_t *ctx);
+extern void forth_order(forth_runtime_context_t *ctx);
+extern void forth_get_order(forth_runtime_context_t *ctx);
+extern void forth_set_order(forth_runtime_context_t *ctx);
+extern void forth_also(forth_runtime_context_t *ctx);
+extern void forth_only(forth_runtime_context_t *ctx);
+extern void forth_previous(forth_runtime_context_t *ctx);
+extern void forth_wordlist(forth_runtime_context_t *ctx);
+
 #endif
+extern void forth_forth(forth_runtime_context_t *ctx);
 
 extern int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth_cell_t *sp_max, forth_cell_t *rp_min, forth_cell_t *rp_max);
 
