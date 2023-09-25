@@ -108,6 +108,8 @@ static forth_cell_t ekey_to_char(struct forth_runtime_context *rctx, forth_cell_
 
 forth_dictionary_t *dict = 0;
 
+#define SEARCH_ORDER_SIZE 32 /* Perhaps move this to some header file at one point. */
+
 int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, const char *cmd)
 {
 	int res;
@@ -115,14 +117,10 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 	forth_cell_t *sp;
 	forth_cell_t *rp;
 	forth_cell_t *search_order;
-	forth_cell_t size = sizeof(struct forth_runtime_context) + sizeof(forth_cell_t) * (dstack_cells + rstack_cells);
-
-	if (0 == dict)
-	{
-		dict = forth_InitDictionary(dictionary, sizeof(dictionary));
-	}
+	forth_cell_t size = sizeof(struct forth_runtime_context) + sizeof(forth_cell_t) * (dstack_cells + rstack_cells + (SEARCH_ORDER_SIZE));
 
     char *ctx = alloca(size);
+
     if (0 == ctx)
     {
     	printf("ERROR: Failed to create Forth runtime context!\r\n");
@@ -134,28 +132,22 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
     rctx = (struct forth_runtime_context *)ctx;
     sp = (forth_cell_t *)(rctx + 1);
     rp = sp + dstack_cells;
+    search_order = rp + rstack_cells;
 
 	if (0 != forth_InitContext(rctx, sp, rp - 1, rp, (rp + rstack_cells) - 1))
 	{
 		return -1;
 	}
 
-	/*
-    rctx->sp0 = rp - 1;
-    rctx->sp = rctx->sp0;
-    rctx->sp_max = rctx->sp0;
-   	rctx->sp_min = sp;
+#if !defined(FORTH_WITHOUT_COMPILATION)
+	if (0 == dict)
+	{
+		dict = forth_InitDictionary(dictionary, sizeof(dictionary));
+	}
+	rctx->dictionary = dict;
+	forth_InitSearchOrder(rctx, search_order, (SEARCH_ORDER_SIZE));
+#endif
 
-   	rctx->rp0 = (rp + rstack_cells) - 1;
-   	rctx->rp = rctx->rp0;
-   	rctx->rp_max = rctx->rp0;
-   	rctx->rp_min = rp;
-
-   	rctx->throw_handler = 0;
-
-    rctx->base = 10;
-	*/
-    		
    	rctx->terminal_width = 80;
    	rctx->terminal_height = 25;
    	rctx->write_string = &write_str;
@@ -173,14 +165,10 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 #if 0
    	rctx->extra.fields.telnet.sd = sd;
    	rctx->extra.fields.telnet.latest_key = -1;
-
-
-
 	rctx->extra.selector = FORTH_FEATURE_SELECTOR_TELNET;
 	rctx->extra.caller_context = 0;
 #endif
 
-	rctx->dictionary = dict;
     res = forth(rctx, cmd, strlen(cmd), 1);
     return res;
 }

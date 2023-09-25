@@ -32,6 +32,7 @@
 #include <forth_internal.h>
 
 //#include <stdio.h>
+
 // ---------------------------------------------------------------------------------------------------------------
 //                                                  STACK Gymnastics, CATCH and THROW
 // ---------------------------------------------------------------------------------------------------------------
@@ -2354,14 +2355,20 @@ void forth_interpret(forth_runtime_context_t *ctx)
         forth_parse_name(ctx);
         symbol_len  = forth_POP(ctx);
         symbol_addr = forth_POP(ctx);
+
         if (0 == symbol_len)
         {
             return;
         }
+
+		ctx->symbol_addr = symbol_addr;
+		ctx->symbol_length = symbol_len;
+
         forth_PUSH(ctx, symbol_addr);
         forth_PUSH(ctx, symbol_len);
         forth_find_name(ctx);
 		xt = (forth_xt_t)forth_POP(ctx);
+
         if (0 != xt)
         {
 #if !defined(FORTH_WITHOUT_COMPILATION)
@@ -2447,6 +2454,7 @@ void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 // If needed port code here from EFCI, but currently not supported.
 #endif
 
+	forth_TYPE0(ctx, " @ col:");
 	forth_DOT(ctx, 10, ctx->to_in);
 	forth_TYPE0(ctx, " Error: ");
 	forth_DOT(ctx, 10, code);
@@ -2564,6 +2572,11 @@ forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
     res = forth_CATCH(ctx, forth_interpret_xt);
 	if (0 != res)
 	{
+		if ((0 != ctx->symbol_addr) && (0 != ctx->symbol_length))
+		{
+			(void)ctx->write_string(ctx, (const char *)(ctx->symbol_addr), ctx->symbol_length);
+		}
+
     	forth_PRINT_ERROR(ctx, res);
 		ctx->state = 0;
 		ctx->defining = 0;
@@ -2722,6 +2735,18 @@ void forth_right_bracket(forth_runtime_context_t *ctx)
 // ---------------------------------------------------------------------------------------------------------------
 //                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
+// FORTH ( -- )
+void forth_forth(forth_runtime_context_t *ctx)
+{
+	if ((0 == ctx->dictionary) || (0 == ctx->wordlists) || (0 == ctx->wordlist_slots) || (0 == ctx->wordlist_cnt))
+	{
+		return;	// Silently ignore problems, in case FORTH is executed in an interpret-only script.
+	}
+
+	ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt] = (forth_cell_t)&(ctx->dictionary->forth_wl);
+}
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
 forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 {
 	forth_dictionary_t *dict;
@@ -2737,11 +2762,213 @@ forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 	dict->dp = 0;
 	length -= FORTH_ALIGN(sizeof(forth_dictionary_t));
 	dict->dp_max = length;
-
+	dict->forth_wl.name = (forth_cell_t)&(dict->items);
+	memcpy(dict->items, "Forth", 6);
+	dict->dp += FORTH_ALIGN(6);
 	return dict;
 }
 
-#if !defined(FORTH_WITHOUT_COMPILATION)
+int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots)
+{
+	if ((0 == wordlists) || (slots < 8))
+	{
+		return -1;
+	}
+
+	if (0 == ctx->dictionary)
+	{
+		return -1;
+	}
+
+	ctx->wordlists = wordlists;
+	ctx->wordlist_slots = slots;
+	ctx->wordlist_cnt = 2;
+	ctx->wordlists[slots - 1] = (forth_cell_t)&forth_root_wordlist;
+	ctx->wordlists[slots - 2] = (forth_cell_t)&(ctx->dictionary->forth_wl);
+	ctx->current =	(forth_cell_t)&(ctx->dictionary->forth_wl);
+
+	return 0;
+}
+
+// FORTH-WORDLIST ( -- wid )
+void forth_forth_wordlist(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+	forth_PUSH(ctx, (forth_cell_t)&(ctx->dictionary->forth_wl));
+}
+
+// GET-CURRENT ( -- wid )
+void forth_get_current(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, ctx->current);
+}
+
+// SET-CURRENT ( wid -- )
+void forth_set_current(forth_runtime_context_t *ctx)
+{
+	forth_cell_t wid = forth_POP(ctx);
+
+	// We do NOT allow adding to the 'Root' worlist, it is only a place holder.
+	if (((forth_cell_t)&forth_root_wordlist) == wid)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	ctx->current = wid;
+}
+
+// DEFINITIONS ( -- )
+void forth_definitions(forth_runtime_context_t *ctx)
+{
+	if ((0 == ctx->wordlists) || (0 == ctx->wordlist_slots) || (0 == ctx->wordlist_cnt))
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	forth_PUSH(ctx, ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt]);
+	forth_set_current(ctx);
+}
+
+// ORDER ( -- )
+void forth_order(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+	forth_cell_t i;
+	const char *name;
+	forth_wordlist_t *wl;
+
+	if ((0 == ctx->dictionary) || (0 == cnt))
+	{
+		return;
+	}
+
+	for (i = 1; i <= cnt; i++)
+	{
+		wl = (forth_wordlist_t *)(ctx->wordlists[ctx->wordlist_slots - i]);
+		name = (const char *)(wl->name);
+
+		if ((0 == name) || (0 == *name)) // Noname wordlist
+		{
+			forth_TYPE0(ctx, "WL-0X");
+			forth_HDOT(ctx, (forth_cell_t)wl);
+		}
+		else
+		{
+			forth_TYPE0(ctx, name);
+			forth_space(ctx);
+		}
+	}
+	forth_cr(ctx);
+}
+
+// GET-ORDER ( -- WIDn ... WID2 WID1 n)
+void forth_get_order(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+	forth_cell_t i;
+
+	if ((0 == ctx->dictionary) || (0 == cnt) || (0 == ctx->wordlists))
+	{
+		forth_PUSH(ctx, 0);
+		return;
+	}
+
+	for (i = 1; i <= cnt; i++)
+	{
+		forth_PUSH(ctx, ctx->wordlists[ctx->wordlist_slots - i]);
+	}
+
+	forth_PUSH(ctx, cnt);
+}
+
+// ALSO ( -- )
+void forth_also(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	if (((cnt + 1) > ctx->wordlist_slots)  || (0 == ctx->wordlists))
+	{
+		forth_THROW(ctx, -49); // search-order overflow
+	}
+
+	cnt += 1;
+	ctx->wordlists[ctx->wordlist_slots - cnt] = ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt ];
+	ctx->wordlist_cnt = cnt;
+}
+
+// PREVIOUS ( -- )
+void forth_previous(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	if (1 > cnt)
+	{
+		forth_THROW(ctx, -50); // search-order underflow
+	}
+
+	ctx->wordlist_cnt = cnt - 1;
+}
+
+// ONLY ( -- )
+void forth_only(forth_runtime_context_t *ctx)
+{
+	if ((1 > ctx->wordlist_slots)  || (0 == ctx->wordlists))
+	{
+		forth_THROW(ctx, -49); // search-order overflow
+	}
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	ctx->wordlist_cnt = 1;
+	ctx->wordlists[ctx->wordlist_slots - 1] = (forth_cell_t)&forth_root_wordlist;
+}
+
+// SET-ORDER ( WIDn ... WID2 WID1 n -- )
+void forth_set_order(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = forth_POP(ctx);
+	forth_cell_t i;
+
+	if (-1 == (forth_scell_t)cnt)
+	{
+		forth_only(ctx);
+		return;
+	}
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	if ((cnt > ctx->wordlist_slots)  || (0 == ctx->wordlists))
+	{
+		forth_THROW(ctx, -49); // search-order overflow
+	}
+
+	ctx->wordlist_cnt = cnt;
+
+	for (i = cnt; i >= 1; i--)
+	{
+		ctx->wordlists[ctx->wordlist_slots - i] = forth_POP(ctx);
+	}
+}
+
 // BRANCH ( -- ) Compiled by some words such as ELSE and REPEAT.
 void forth_branch(forth_runtime_context_t *ctx)
 {
@@ -3515,10 +3742,10 @@ forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t 
 	forth_align(ctx);
 	forth_here(ctx);
 	res = (forth_vocabulary_entry_t *)forth_POP(ctx);
-	forth_COMMA(ctx, (forth_cell_t)here);				// name
-	forth_COMMA(ctx, 0);								// flags
-	forth_COMMA(ctx, ctx->dictionary->latest);			// link
-	//forth_COMMA(ctx, 0);			// place holder for meaning
+	forth_COMMA(ctx, (forth_cell_t)here);							// name
+	forth_COMMA(ctx, 0);											// flags
+	forth_COMMA(ctx, (forth_cell_t)forth_GET_LATEST(ctx));			// link
+
 	return res;
 }
 
@@ -3566,8 +3793,8 @@ void forth_variable(forth_runtime_context_t *ctx)
 	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
 	entry->flags = FORTH_XT_FLAGS_ACTION_VARIABLE;
 	forth_COMMA(ctx, 0); // Meaning.
-	entry->link = ctx->dictionary->latest;
-	ctx->dictionary->latest = (forth_cell_t)entry;
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
 }
 
 // CONSTANT ( value "name" -- )
@@ -3580,8 +3807,8 @@ void forth_constant(forth_runtime_context_t *ctx)
 	entry->flags = FORTH_XT_FLAGS_ACTION_CONSTANT;
 	//entry->meaning = value;
 	forth_COMMA(ctx, value); // Meaning.
-	entry->link = ctx->dictionary->latest;
-	ctx->dictionary->latest = (forth_cell_t)entry;
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
 }
 
 // : ( "name" -- colon-sys)
@@ -3632,8 +3859,8 @@ void forth_semicolon(forth_runtime_context_t *ctx)
 
 	if ((0 != entry->name) && (0 != *((const char *)(entry->name)))) // Checking for noname entries.
 	{
-		entry->link = ctx->dictionary->latest;
-		ctx->dictionary->latest = (forth_cell_t)entry;
+		entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+		forth_SET_LATEST(ctx, entry);
 	}
 
 	ctx->defining = 0;
@@ -3643,24 +3870,39 @@ void forth_semicolon(forth_runtime_context_t *ctx)
 // IMMEDIATE ( -- )
 void forth_immediate(forth_runtime_context_t *ctx)
 {
-	forth_vocabulary_entry_t *entry;
-
-	if (0 != ctx->dictionary->latest)
+	forth_vocabulary_entry_t *entry = forth_GET_LATEST(ctx);
+	if (0 != entry)
 	{
-		entry = (forth_vocabulary_entry_t *)(ctx->dictionary->latest);
 		entry->flags |= FORTH_XT_FLAGS_IMMEDIATE;
 	}
 }
 
-// LATEST ( -- addr )
-void forth_latest(forth_runtime_context_t *ctx)
+forth_vocabulary_entry_t *forth_GET_LATEST(forth_runtime_context_t *ctx)
 {
 	if (0 == ctx->dictionary)
 	{
 		forth_THROW(ctx, -21); // 	unsupported operation
 	}
 
-	forth_PUSH(ctx, (forth_cell_t)&(ctx->dictionary->latest));
+	//return (forth_vocabulary_entry_t *)(ctx->dictionary->latest);
+	return (forth_vocabulary_entry_t *)(ctx->dictionary->forth_wl.latest);
+}
+
+void forth_SET_LATEST(forth_runtime_context_t *ctx, forth_vocabulary_entry_t *token)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // 	unsupported operation
+	}
+
+	//ctx->dictionary->latest = (forth_cell_t)token;
+	ctx->dictionary->forth_wl.latest = (forth_cell_t)token;
+}
+
+// LATEST ( -- addr )
+void forth_latest(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, (forth_cell_t)forth_GET_LATEST(ctx));
 }
 
 // RECURSE ( -- )
@@ -3684,8 +3926,8 @@ void forth_create(forth_runtime_context_t *ctx)
 	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
 	entry->flags = FORTH_XT_FLAGS_ACTION_CREATE;
 	forth_COMMA(ctx, 0); // Meaning.
-	entry->link = ctx->dictionary->latest;
-	ctx->dictionary->latest = (forth_cell_t)entry;
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
 }
 
 // >BODY ( xt -- addr )
@@ -3704,12 +3946,8 @@ void forth_to_body(forth_runtime_context_t *ctx)
 // (does>) ( -- )
 void forth_p_does(forth_runtime_context_t *ctx)
 {
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // 	unsupported operation
-	}
-
-	((forth_xt_t)(ctx->dictionary->latest))->meaning = (forth_cell_t)&(ctx->ip[1]);
+	forth_vocabulary_entry_t *entry = forth_GET_LATEST(ctx);
+	entry->meaning = (forth_cell_t)&(ctx->ip[1]);
 }
 
 // DOES> C:( colon-sys1 -- colon-sys2 )
@@ -4256,13 +4494,38 @@ DEF_FORTH_WORD( "sp!",  	 0, forth_sp_store,      "( sp -- )"),
 DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
 DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
-DEF_FORTH_WORD( "forth",  	 0, forth_noop,      	 "Wordlists are not implemented, this word does nothing."),
-DEF_FORTH_WORD( "definitions",0,forth_noop,      	 "Wordlists are not implemented, this word does nothing."),
 DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "( -- v ) The version number of this system."),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
 // -----------------------------------------------------------------------------------------------
+//						            Minimal (ROOT) List
+// -----------------------------------------------------------------------------------------------
+const forth_vocabulary_entry_t forth_wl_root[] =
+{
+DEF_FORTH_WORD( "forth",  	 		0, forth_forth,      	 				"( -- )"),
+#if !defined(FORTH_WITHOUT_COMPILATION)
+DEF_FORTH_WORD( "definitions",		0, forth_definitions,      	 			"( -- )"),
+DEF_FORTH_WORD("forth-wordlist",	0, forth_forth_wordlist,     			"( -- wid )" ),
+DEF_FORTH_WORD("order",  			0, forth_order,                       	"( -- )" ),
+DEF_FORTH_WORD("only",   			0, forth_only,                        	"( -- )" ),
+DEF_FORTH_WORD("also",   			0, forth_also,                        	"( -- )" ),
+DEF_FORTH_WORD("previous",   		0, forth_previous,                		"( -- )" ),
+DEF_FORTH_WORD("get-current",		0, forth_get_current,           		"( -- wid )" ),
+DEF_FORTH_WORD("set-current",		0, forth_set_current,           		"( wid -- )" ),
+DEF_FORTH_WORD("set-order",			0, forth_set_order,               		"( WIDn ... WID2 WID1 n -- )" ),
+DEF_FORTH_WORD("get-order",			0, forth_get_order,               		"( -- WIDn ... WID2 WID1 n )" ),
+#else
+DEF_FORTH_WORD("only",   			0, forth_noop,                        	"( -- )" ),
+#endif
+DEF_FORTH_WORD(0, 0, 0, 0)
+};
+
+forth_wordlist_t forth_root_wordlist =
+{
+	0, 0 , (forth_cell_t) "Root"
+};
+
 // Some headers (used as execution tokens) that the system needs to refer to from C code.
 // The order of these matters, so do not change this array unless you know what you are doing.
 //

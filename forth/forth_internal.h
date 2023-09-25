@@ -64,11 +64,21 @@ typedef forth_vocabulary_entry_t *forth_xt_t;
 #define FORTH_XT_FLAGS_ACTION_DEFER		0x03
 #define	FORTH_XT_FLAGS_ACTION_THREADED	0x04
 #define	FORTH_XT_FLAGS_ACTION_CREATE	0x05
+
+struct forth_wordlist_s
+{
+	forth_cell_t latest;
+	forth_cell_t parent;
+	forth_cell_t name;
+};
+
+typedef struct forth_wordlist_s forth_wordlist_t;
+
 struct forth_dictionary
 {
 	forth_ucell_t	dp;			// An index to items.
 	forth_ucell_t	dp_max;		// Max value of dp.
-	forth_ucell_t	latest;		// The location of the last defined word header, index to items.
+	forth_wordlist_t forth_wl;  // FORTH-WORDLIST
 	uint8_t 		items[1];	// Place holder for the rest of the dictionary.
 };
 
@@ -94,6 +104,8 @@ struct forth_runtime_context
 	forth_cell_t	user_break;			// The user has pressed CTRL-C.....
 	forth_cell_t	abort_msg_len;		// Used by ABORT"
 	forth_cell_t	abort_msg_addr;		// Used by ABORT"
+	forth_cell_t	symbol_addr;
+	forth_cell_t	symbol_length;
 	forth_cell_t	blk;		// BLK
 	forth_cell_t	source_id;
 	const char		*source_address;
@@ -104,10 +116,10 @@ struct forth_runtime_context
 	forth_cell_t	line_no;
 	char file_buffer[FORTH_FILE_INPUT_BUFFER_LENGTH];
 #endif
-//	forth_cell_t	*wordlists;	// Wordlists in the search order.
-//	forth_cell_t	wordlist_slots;	// The number of slots in the search order.
-//	forth_cell_t	wordlist_cnt;	// The number of workdlists in the search order.
-//	forth_cell_t	current;	// The current wordlist (where definitions are appended).
+	forth_cell_t	*wordlists;	// Wordlists in the search order.
+	forth_cell_t	wordlist_slots;	// The number of slots in the search order.
+	forth_cell_t	wordlist_cnt;	// The number of workdlists in the search order.
+	forth_cell_t	current;	// The current wordlist (where definitions are appended).
 	forth_cell_t	defining;	// The word being defined.
 	forth_cell_t	trace;		// Enabled execution trace.
 	forth_cell_t	terminal_width;
@@ -140,7 +152,10 @@ struct forth_runtime_context
 
 extern const forth_vocabulary_entry_t forth_wl_forth[];
 extern const forth_vocabulary_entry_t forth_wl_system[];
+extern const forth_vocabulary_entry_t forth_wl_root[] ;
 extern const forth_vocabulary_entry_t *forth_master_list_of_lists[];
+extern forth_wordlist_t forth_root_wordlist;
+
 extern const forth_xt_t forth_interpret_xt;
 extern const forth_xt_t forth_drop_xt;
 extern const forth_xt_t forth_over_xt;
@@ -160,9 +175,11 @@ extern const forth_xt_t forth_pLOOP_xt;
 extern const forth_xt_t forth_ppLOOP_xt;
 extern const forth_xt_t forth_pDOES_xt;
 extern const forth_xt_t forth_pABORTq_xt;
-#endif
 
 extern forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length);
+extern int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots);
+#endif
+
 extern int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth_cell_t *sp_max, forth_cell_t *rp_min, forth_cell_t *rp_max);
 
 extern void forth_PRINT_TRACE(forth_runtime_context_t *ctx, forth_xt_t xt);
@@ -183,10 +200,15 @@ extern forth_dcell_t forth_DTOS_READ(forth_runtime_context_t *ctx);
 extern forth_dcell_t forth_DPOP(forth_runtime_context_t *ctx);
 extern forth_dcell_t forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud);
 
-extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
-extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
+#if !defined(FORTH_WITHOUT_COMPILATION)
+extern forth_vocabulary_entry_t *forth_GET_LATEST(forth_runtime_context_t *ctx);
+extern void forth_SET_LATEST(forth_runtime_context_t *ctx, forth_vocabulary_entry_t *token);
 extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
 #define forth_COMPILE_COMMA(CTX , XT) forth_COMMA((CTX), (forth_cell_t)(XT))
+#endif
+
+extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
+extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
 
 extern void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt);
@@ -313,6 +335,7 @@ extern void forth_d2div(forth_runtime_context_t *ctx);				// D2/
 extern void forth_ddot(forth_runtime_context_t *ctx);				// D.
 #endif
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
 extern void forth_to_r(forth_runtime_context_t *ctx);				// >R
 extern void forth_r_fetch(forth_runtime_context_t *ctx);			// R@
 extern void forth_r_from(forth_runtime_context_t *ctx);				// R>
@@ -321,6 +344,7 @@ extern void forth_2r_fetch(forth_runtime_context_t *ctx);			// 2R@
 extern void forth_2r_from(forth_runtime_context_t *ctx);			// 2R>
 extern void forth_n_to_r(forth_runtime_context_t *ctx);				// N>R
 extern void forth_n_r_from(forth_runtime_context_t *ctx);			// NR>
+#endif
 
 extern void forth_add(forth_runtime_context_t *ctx);
 extern void forth_subtract(forth_runtime_context_t *ctx);
@@ -357,9 +381,12 @@ extern void forth_find_name(struct forth_runtime_context *ctx);
 extern void forth_bracket_defined(forth_runtime_context_t *ctx);
 extern void forth_bracket_undefined(forth_runtime_context_t *ctx);
 extern void forth_tick(forth_runtime_context_t *ctx);				// '
-extern void forth_bracket_tick(forth_runtime_context_t *ctx);		// [']
 extern void forth_char(forth_runtime_context_t *ctx);				// CHAR
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
+extern void forth_bracket_tick(forth_runtime_context_t *ctx);		// [']
 extern void forth_bracket_char(forth_runtime_context_t *ctx);		// [CHAR]
+#endif
 
 extern void forth_evaluate(forth_runtime_context_t *ctx);
 extern void forth_words(forth_runtime_context_t *ctx);

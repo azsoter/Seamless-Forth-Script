@@ -79,7 +79,8 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
         return 0;
     }
    
-	for (p = (forth_vocabulary_entry_t *)(dictionary->latest); 0 != p;  p = (forth_vocabulary_entry_t *)(p->link))
+	//for (p = (forth_vocabulary_entry_t *)(dictionary->latest); 0 != p;  p = (forth_vocabulary_entry_t *)(p->link))
+    for (p = (forth_vocabulary_entry_t *)(dictionary->forth_wl.latest); 0 != p;  p = (forth_vocabulary_entry_t *)(p->link))
 	{
         if (0 != p->name)
         {
@@ -121,6 +122,11 @@ void forth_find_name(struct forth_runtime_context *ctx)
         }
     }
 
+    if (0 == ep)
+    {
+        ep = forth_SEARCH_LIST(forth_wl_root, (char *)addr, (int)len);
+    }
+
     // Pushing the address like this overrides (discards) the const qualifier from the poiter.
     // This is the lesser of two evils.
     // The alternative would be to make the entire serach mechanism consume and return non const decorated pointers.
@@ -134,81 +140,88 @@ void forth_find_name(struct forth_runtime_context *ctx)
 // -----------------------------------------------------------------------------------------------
 //                                    Vocabulary Listings
 // -----------------------------------------------------------------------------------------------
-// HELP ( -- )
-void forth_help(forth_runtime_context_t *ctx)
+void forth_PRINT_HELP_LIST(forth_runtime_context_t *ctx, const forth_vocabulary_entry_t *ep)
 {
-	static const char *action = "PCVDT..";
-	const forth_vocabulary_entry_t **wl;// = forth_master_list_of_lists;
-    const forth_vocabulary_entry_t *ep;
+    static const char *action = "PCVDT..";
 	size_t len;
 	char a;
 
+    for (; 0 != ep->name; ep++)
+    {
+
+		forth_EMIT(ctx, (FORTH_XT_FLAGS_IMMEDIATE & ep->flags) ? 'I' : FORTH_CHAR_SPACE);
+		a = action[FORTH_XT_FLAGS_ACTION_MASK & ep->flags];
+		forth_EMIT(ctx, a);
+		forth_space(ctx);
+        forth_TYPE0(ctx, (char *)(ep->name));
+#if !defined(FORTH_EXCLUDE_DESCRIPTIONS)
+        if (0 != ep->link)
+        {
+			len = strlen((char *)(ep->name));
+			forth_PUSH(ctx, (len < 20) ? (20 - len) : 1);
+			forth_spaces(ctx);
+            forth_TYPE0(ctx, (char *)(ep->link));
+        }
+#endif
+        forth_cr(ctx);
+    }  
+}
+// HELP ( -- )
+void forth_help(forth_runtime_context_t *ctx)
+{
+	const forth_vocabulary_entry_t **wl;// = forth_master_list_of_lists;
+ 
    	for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
     {
-    	for (ep = *wl; 0 != ep->name; ep++)
-    	{
-
-			forth_EMIT(ctx, (FORTH_XT_FLAGS_IMMEDIATE & ep->flags) ? 'I' : FORTH_CHAR_SPACE);
-			a = action[FORTH_XT_FLAGS_ACTION_MASK & ep->flags];
-			forth_EMIT(ctx, a);
-			forth_space(ctx);
-        	forth_TYPE0(ctx, (char *)(ep->name));
-#if !defined(FORTH_EXCLUDE_DESCRIPTIONS)
-        	if (0 != ep->link)
-        	{
-				len = strlen((char *)(ep->name));
-				forth_PUSH(ctx, (len < 20) ? (20 - len) : 1);
-				forth_spaces(ctx);
-            	//forth_EMIT(ctx, '\t');
-            	forth_TYPE0(ctx, (char *)(ep->link));
-        	}
-#endif
-        	forth_cr(ctx);
-    	}
+        forth_PRINT_HELP_LIST(ctx, *wl);
 	}
+
+    forth_PRINT_HELP_LIST(ctx, forth_wl_root);
 }
 
-void forth_words(forth_runtime_context_t *ctx)
+void forth_PRINT_LIST(forth_runtime_context_t *ctx, const forth_vocabulary_entry_t *ep, int linked)
 {
     size_t len;
-   	const forth_vocabulary_entry_t *ep;
+
+    while((0 != ep) && (0 != ep->name))
+    {
+      	len = strlen((char *)(ep->name));
+
+        if ((ctx->terminal_width - ctx->terminal_col) <= len)
+		{
+            forth_cr(ctx);
+        }
+
+        forth_TYPE0(ctx, (char *)(ep->name));
+        forth_space(ctx);
+
+        if (linked)
+        {
+            ep = (const forth_vocabulary_entry_t *)(ep->link);
+        }
+        else
+        {
+            ep++;
+        }
+    }
+}
+
+// WORDS ( -- )
+void forth_words(forth_runtime_context_t *ctx)
+{
     const forth_vocabulary_entry_t **wl = forth_master_list_of_lists;
 
 	if (0 != ctx->dictionary)
 	{
-		for (ep = (forth_vocabulary_entry_t *)(ctx->dictionary->latest); 0 != ep; ep = (forth_vocabulary_entry_t *)(ep->link))
-		{
-			len = strlen((char *)(ep->name));
-
-			if (0 != len)
-			{
-				if ((ctx->terminal_width - ctx->terminal_col) <= len)
-				{
-            		forth_cr(ctx);
-        		}
-
-        		forth_TYPE0(ctx, (char *)(ep->name));
-        		forth_space(ctx);
-			}
-
-		}
+        forth_PRINT_LIST(ctx, (forth_vocabulary_entry_t *)(ctx->dictionary->forth_wl.latest), 1);
 	}
 
     for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
     {
-    	for (ep = *wl; 0 != ep->name; ep++)
-    	{
-        	len = strlen((char *)(ep->name));
-
-        	if ((ctx->terminal_width - ctx->terminal_col) <= len)
-			{
-            	forth_cr(ctx);
-        	}
-
-        	forth_TYPE0(ctx, (char *)(ep->name));
-        	forth_space(ctx);
-    	}
+       forth_PRINT_LIST(ctx, *wl, 0);
 	}
+
+    forth_PRINT_LIST(ctx, forth_wl_root, 0);
 
     forth_cr(ctx);
 }
