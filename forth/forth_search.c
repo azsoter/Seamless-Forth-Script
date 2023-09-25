@@ -68,19 +68,12 @@ const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t
     return 0;
 }
 
-// Find a name in the live (user defined) forth dictionary (which is a linked list, not an array).
-// Return the address of the entry that matches the name or zero (NULL) if the name is not found.
-forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary, const char *name, int name_length)
+// Search the contents of a word list.
+forth_vocabulary_entry_t *forth_SEARCH_WORDLIST(forth_wordlist_t *wid, const char *name, int name_length)
 {
-    forth_vocabulary_entry_t *p;
+    forth_vocabulary_entry_t *p = (forth_vocabulary_entry_t *)(wid->latest);
 
-    if (0 == dictionary)
-    {
-        return 0;
-    }
-   
-	//for (p = (forth_vocabulary_entry_t *)(dictionary->latest); 0 != p;  p = (forth_vocabulary_entry_t *)(p->link))
-    for (p = (forth_vocabulary_entry_t *)(dictionary->forth_wl.latest); 0 != p;  p = (forth_vocabulary_entry_t *)(p->link))
+    while (0 != p)
 	{
         if (0 != p->name)
         {
@@ -88,10 +81,86 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
             {
                 return p;
             }  
-        }  
+        }
+        p = (forth_vocabulary_entry_t *)(p->link); 
+    }
+    return 0;
+}
+
+// Search all available lists for the name (passed as a c-addr, len pain or the data stack).
+// If the name is found return the corresponding execution token.
+// If the name is not found return 0.
+// https://forth-standard.org/proposals/find-name
+//
+// FIND-NAME ( c-addr len -- nt|0 )
+//
+const forth_vocabulary_entry_t *forth_FIND_NAME(struct forth_runtime_context *ctx, const char *name, forth_cell_t len)
+{
+    const forth_vocabulary_entry_t **wl;
+    const forth_vocabulary_entry_t *ep = 0;
+    forth_wordlist_t *wid;
+    forth_cell_t i;
+    int root_searched = 0;
+
+    if ((0 != ctx->dictionary) && (0 != ctx->wordlists) && (0 != ctx->wordlist_cnt) && (0 != ctx->wordlist_slots))
+    {
+        // forth_order(ctx);
+        for (i = 1; i <= ctx->wordlist_cnt; i++)
+        {
+            wid = (forth_wordlist_t *)(ctx->wordlists[ctx->wordlist_slots - i]);
+            ep = forth_SEARCH_WORDLIST(wid, name, len);
+
+            if (0 != ep)
+            {
+                return ep;
+            }
+
+            if (wid == (forth_wordlist_t *)&(ctx->dictionary->forth_wl))
+            {
+                for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
+                {
+                    ep = forth_SEARCH_LIST(*wl, name, (int)len);
+
+                    if (0 != ep)
+                    {
+                        return ep;
+                    }
+                }
+
+                // Root is sort of part of Forth, so search it here.
+                if (0 == root_searched)
+                {
+                    ep = forth_SEARCH_LIST(forth_wl_root, name, (int)len);
+                    root_searched = 1;
+                    if (0 != ep)
+                    {
+                        return ep;
+                    }
+                }
+
+            }
+
+            if ((wid == (forth_wordlist_t *)&forth_root_wordlist) && (0 == root_searched))
+            {
+                // Root was specifically in the search order.
+                ep = forth_SEARCH_LIST(forth_wl_root, name, (int)len);
+                root_searched = 1;
+
+                if (0 != ep)
+                {
+                    return ep;
+                }
+            }
+        }
+    }
+ 
+    if (0 == root_searched)
+    {
+        // As a last resort search Root.
+        ep = forth_SEARCH_LIST(forth_wl_root, name, (int)len);
     }
 
-    return p;
+    return ep;
 }
 
 // Search all available lists for the name (passed as a c-addr, len pain or the data stack).
@@ -103,29 +172,9 @@ forth_vocabulary_entry_t *forth_SEARCH_DICTIONARY(forth_dictionary_t *dictionary
 //
 void forth_find_name(struct forth_runtime_context *ctx)
 {
-    const forth_vocabulary_entry_t **wl;
-    const forth_vocabulary_entry_t *ep = 0;
     forth_cell_t len = forth_POP(ctx);
-    forth_cell_t addr = forth_POP(ctx);
-
-    ep = forth_SEARCH_DICTIONARY(ctx->dictionary, (const char *)addr, len);
-
-    if (0 == ep)
-    {
-        for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
-        {
-            ep = forth_SEARCH_LIST(*wl, (char *)addr, (int)len);
-            if (0 != ep)
-            {
-                break;
-            }
-        }
-    }
-
-    if (0 == ep)
-    {
-        ep = forth_SEARCH_LIST(forth_wl_root, (char *)addr, (int)len);
-    }
+    const char *addr = (const char *)forth_POP(ctx);
+    const forth_vocabulary_entry_t *ep = forth_FIND_NAME(ctx, addr, len);
 
     // Pushing the address like this overrides (discards) the const qualifier from the poiter.
     // This is the lesser of two evils.
@@ -136,7 +185,6 @@ void forth_find_name(struct forth_runtime_context *ctx)
 
     forth_PUSH(ctx, (forth_cell_t)ep);
 }
-
 // -----------------------------------------------------------------------------------------------
 //                                    Vocabulary Listings
 // -----------------------------------------------------------------------------------------------
@@ -206,22 +254,56 @@ void forth_PRINT_LIST(forth_runtime_context_t *ctx, const forth_vocabulary_entry
     }
 }
 
-// WORDS ( -- )
-void forth_words(forth_runtime_context_t *ctx)
+// A factor of WORDS
+void forth_words_master(forth_runtime_context_t *ctx)
 {
     const forth_vocabulary_entry_t **wl = forth_master_list_of_lists;
-
-	if (0 != ctx->dictionary)
-	{
-        forth_PRINT_LIST(ctx, (forth_vocabulary_entry_t *)(ctx->dictionary->forth_wl.latest), 1);
-	}
 
     for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
     {
        forth_PRINT_LIST(ctx, *wl, 0);
 	}
+}
 
-    forth_PRINT_LIST(ctx, forth_wl_root, 0);
+// WORDS ( -- )
+void forth_words(forth_runtime_context_t *ctx)
+{
+
+    forth_wordlist_t *wid;
+    forth_cell_t i;
+    int root_listed = 0;
+
+	if (0 != ctx->dictionary)
+	{
+        if ((0 != ctx->wordlists) && (0 != ctx->wordlist_slots))
+        {
+            for (i = ctx->wordlist_cnt; i > 0; i--)
+            {
+                wid = (forth_wordlist_t *)(ctx->wordlists[ctx->wordlist_slots - i]);
+                forth_PRINT_LIST(ctx, (forth_vocabulary_entry_t *)(wid->latest), 1);
+
+                if (wid == (forth_wordlist_t *)&(ctx->dictionary->forth_wl))
+                {
+                    forth_words_master(ctx);
+                    if (0 == root_listed)
+                    {
+                        // List root as part of Forth.
+                        forth_PRINT_LIST(ctx, forth_wl_root, 0);
+                        root_listed = 1;
+                    }
+                }
+
+                if (wid == (forth_wordlist_t *)&forth_root_wordlist)
+                {
+                    if (0 == root_listed)
+                    {
+                        forth_PRINT_LIST(ctx, forth_wl_root, 0);
+                        root_listed = 1;
+                    }
+                }
+            }
+        }
+	}
 
     forth_cr(ctx);
 }

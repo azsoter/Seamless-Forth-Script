@@ -2838,7 +2838,7 @@ void forth_order(forth_runtime_context_t *ctx)
 	forth_cell_t cnt = ctx->wordlist_cnt;
 	forth_cell_t i;
 	const char *name;
-	forth_wordlist_t *wl;
+	forth_wordlist_t *wid;
 
 	if ((0 == ctx->dictionary) || (0 == cnt))
 	{
@@ -2847,13 +2847,13 @@ void forth_order(forth_runtime_context_t *ctx)
 
 	for (i = 1; i <= cnt; i++)
 	{
-		wl = (forth_wordlist_t *)(ctx->wordlists[ctx->wordlist_slots - i]);
-		name = (const char *)(wl->name);
+		wid = (forth_wordlist_t *)(ctx->wordlists[ctx->wordlist_slots - i]);
+		name = (const char *)(wid->name);
 
 		if ((0 == name) || (0 == *name)) // Noname wordlist
 		{
-			forth_TYPE0(ctx, "WL-0X");
-			forth_HDOT(ctx, (forth_cell_t)wl);
+			forth_TYPE0(ctx, "WID:0X");
+			forth_HDOT(ctx, (forth_cell_t)wid);
 		}
 		else
 		{
@@ -4475,11 +4475,9 @@ DEF_FORTH_WORD("abort\"",     FORTH_XT_FLAGS_IMMEDIATE, forth_abort_quote,    "(
 
 DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
 DEF_FORTH_WORD("evaluate",   0, forth_evaluate,		 "( c-addr len -- )"),
-DEF_FORTH_WORD("words",      0, forth_words,         "( -- )"),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
 DEF_FORTH_WORD("see",        0, forth_see,           "( \"name\"-- )"),
 DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
-DEF_FORTH_WORD( "bye",       0, forth_bye,           "( -- )"),
 DEF_FORTH_WORD("[defined]",   FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_defined, "( \"name\" -- flag )"),
 DEF_FORTH_WORD("[undefined]", FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_undefined, "( \"name\" -- flag )"),
 DEF_FORTH_WORD("[if]",        FORTH_XT_FLAGS_IMMEDIATE, forth_bracket_if,   "( flag -- )"),
@@ -4503,7 +4501,7 @@ DEF_FORTH_WORD(0, 0, 0, 0)
 // -----------------------------------------------------------------------------------------------
 const forth_vocabulary_entry_t forth_wl_root[] =
 {
-DEF_FORTH_WORD( "forth",  	 		0, forth_forth,      	 				"( -- )"),
+DEF_FORTH_WORD("words",      		0, forth_words,         				"( -- )"),
 #if !defined(FORTH_WITHOUT_COMPILATION)
 DEF_FORTH_WORD( "definitions",		0, forth_definitions,      	 			"( -- )"),
 DEF_FORTH_WORD("forth-wordlist",	0, forth_forth_wordlist,     			"( -- wid )" ),
@@ -4518,6 +4516,8 @@ DEF_FORTH_WORD("get-order",			0, forth_get_order,               		"( -- WIDn ...
 #else
 DEF_FORTH_WORD("only",   			0, forth_noop,                        	"( -- )" ),
 #endif
+DEF_FORTH_WORD( "bye",				0, forth_bye,           				"( -- )"),
+DEF_FORTH_WORD( "forth",  	 		0, forth_forth,      	 				"( -- )"),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
