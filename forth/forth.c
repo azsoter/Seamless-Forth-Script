@@ -1606,7 +1606,7 @@ static char *forth_FORMAT_UNSIGNED(forth_cell_t value, forth_cell_t base, forth_
 	return p; 
 }
 
-static int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value)
+int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
 	char *end = buffer + (FORTH_CELL_HEX_DIGITS) + 1;
@@ -1616,7 +1616,7 @@ static int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value)
 	return ctx->write_string(ctx, p, (end - p) + 1);
 }
 
-static int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
+int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
 	char *end = buffer + sizeof(ctx->num_buff);
@@ -1626,7 +1626,7 @@ static int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, fort
 	return ctx->write_string(ctx, p, (end - p) + 1);
 }
 
-static int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
+int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
 	char *end = buffer + sizeof(ctx->num_buff);
@@ -2735,17 +2735,6 @@ void forth_right_bracket(forth_runtime_context_t *ctx)
 // ---------------------------------------------------------------------------------------------------------------
 //                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
-// FORTH ( -- )
-void forth_forth(forth_runtime_context_t *ctx)
-{
-	if ((0 == ctx->dictionary) || (0 == ctx->wordlists) || (0 == ctx->wordlist_slots) || (0 == ctx->wordlist_cnt))
-	{
-		return;	// Silently ignore problems, in case FORTH is executed in an interpret-only script.
-	}
-
-	ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt] = (forth_cell_t)&(ctx->dictionary->forth_wl);
-}
-
 #if !defined(FORTH_WITHOUT_COMPILATION)
 forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 {
@@ -2766,222 +2755,6 @@ forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 	memcpy(dict->items, "Forth", 6);
 	dict->dp += FORTH_ALIGN(6);
 	return dict;
-}
-
-int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots)
-{
-	if ((0 == wordlists) || (slots < 8))
-	{
-		return -1;
-	}
-
-	if (0 == ctx->dictionary)
-	{
-		return -1;
-	}
-
-	ctx->wordlists = wordlists;
-	ctx->wordlist_slots = slots;
-	ctx->wordlist_cnt = 2;
-	ctx->wordlists[slots - 1] = (forth_cell_t)&forth_root_wordlist;
-	ctx->wordlists[slots - 2] = (forth_cell_t)&(ctx->dictionary->forth_wl);
-	ctx->current =	(forth_cell_t)&(ctx->dictionary->forth_wl);
-
-	return 0;
-}
-
-// FORTH-WORDLIST ( -- wid )
-void forth_forth_wordlist(forth_runtime_context_t *ctx)
-{
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // Unsupported operation.
-	}
-	forth_PUSH(ctx, (forth_cell_t)&(ctx->dictionary->forth_wl));
-}
-
-// GET-CURRENT ( -- wid )
-void forth_get_current(forth_runtime_context_t *ctx)
-{
-	forth_PUSH(ctx, ctx->current);
-}
-
-// SET-CURRENT ( wid -- )
-void forth_set_current(forth_runtime_context_t *ctx)
-{
-	forth_cell_t wid = forth_POP(ctx);
-
-	// We do NOT allow adding to the 'Root' worlist, it is only a place holder.
-	if (((forth_cell_t)&forth_root_wordlist) == wid)
-	{
-		forth_THROW(ctx, -21); // unsupported operation
-	}
-
-	ctx->current = wid;
-}
-
-// DEFINITIONS ( -- )
-void forth_definitions(forth_runtime_context_t *ctx)
-{
-	if ((0 == ctx->wordlists) || (0 == ctx->wordlist_slots) || (0 == ctx->wordlist_cnt))
-	{
-		forth_THROW(ctx, -21); // unsupported operation
-	}
-
-	forth_PUSH(ctx, ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt]);
-	forth_set_current(ctx);
-}
-
-// ORDER ( -- )
-void forth_order(forth_runtime_context_t *ctx)
-{
-	forth_cell_t cnt = ctx->wordlist_cnt;
-	forth_cell_t i;
-	const char *name;
-	forth_wordlist_t *wid;
-
-	if ((0 == ctx->dictionary) || (0 == cnt))
-	{
-		return;
-	}
-
-	for (i = 1; i <= cnt; i++)
-	{
-		wid = (forth_wordlist_t *)(ctx->wordlists[ctx->wordlist_slots - i]);
-		name = (const char *)(wid->name);
-
-		if ((0 == name) || (0 == *name)) // Noname wordlist
-		{
-			forth_TYPE0(ctx, "WID:0X");
-			forth_HDOT(ctx, (forth_cell_t)wid);
-		}
-		else
-		{
-			forth_TYPE0(ctx, name);
-			forth_space(ctx);
-		}
-	}
-	forth_cr(ctx);
-}
-
-// GET-ORDER ( -- WIDn ... WID2 WID1 n)
-void forth_get_order(forth_runtime_context_t *ctx)
-{
-	forth_cell_t cnt = ctx->wordlist_cnt;
-	forth_cell_t i;
-
-	if ((0 == ctx->dictionary) || (0 == cnt) || (0 == ctx->wordlists))
-	{
-		forth_PUSH(ctx, 0);
-		return;
-	}
-
-	for (i = 1; i <= cnt; i++)
-	{
-		forth_PUSH(ctx, ctx->wordlists[ctx->wordlist_slots - i]);
-	}
-
-	forth_PUSH(ctx, cnt);
-}
-
-// ALSO ( -- )
-void forth_also(forth_runtime_context_t *ctx)
-{
-	forth_cell_t cnt = ctx->wordlist_cnt;
-
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // unsupported operation
-	}
-
-	if (((cnt + 1) > ctx->wordlist_slots)  || (0 == ctx->wordlists))
-	{
-		forth_THROW(ctx, -49); // search-order overflow
-	}
-
-	cnt += 1;
-	ctx->wordlists[ctx->wordlist_slots - cnt] = ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt ];
-	ctx->wordlist_cnt = cnt;
-}
-
-// PREVIOUS ( -- )
-void forth_previous(forth_runtime_context_t *ctx)
-{
-	forth_cell_t cnt = ctx->wordlist_cnt;
-
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // unsupported operation
-	}
-
-	if (1 > cnt)
-	{
-		forth_THROW(ctx, -50); // search-order underflow
-	}
-
-	ctx->wordlist_cnt = cnt - 1;
-}
-
-// ONLY ( -- )
-void forth_only(forth_runtime_context_t *ctx)
-{
-	if ((1 > ctx->wordlist_slots)  || (0 == ctx->wordlists))
-	{
-		forth_THROW(ctx, -49); // search-order overflow
-	}
-
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // unsupported operation
-	}
-
-	ctx->wordlist_cnt = 1;
-	ctx->wordlists[ctx->wordlist_slots - 1] = (forth_cell_t)&forth_root_wordlist;
-}
-
-// SET-ORDER ( WIDn ... WID2 WID1 n -- )
-void forth_set_order(forth_runtime_context_t *ctx)
-{
-	forth_cell_t cnt = forth_POP(ctx);
-	forth_cell_t i;
-
-	if (-1 == (forth_scell_t)cnt)
-	{
-		forth_only(ctx);
-		return;
-	}
-
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // unsupported operation
-	}
-
-	if ((cnt > ctx->wordlist_slots)  || (0 == ctx->wordlists))
-	{
-		forth_THROW(ctx, -49); // search-order overflow
-	}
-
-	ctx->wordlist_cnt = cnt;
-
-	for (i = cnt; i >= 1; i--)
-	{
-		ctx->wordlists[ctx->wordlist_slots - i] = forth_POP(ctx);
-	}
-}
-
-// WORDLIST ( -- wid )
-void forth_wordlist(forth_runtime_context_t *ctx)
-{
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // unsupported operation
-	}
-
-	forth_align(ctx);
-	forth_here(ctx);
-	forth_COMMA(ctx, 0);									// latest
-	forth_COMMA(ctx, (forth_cell_t)forth_GET_LATEST(ctx));	// parent
-	forth_COMMA(ctx, 0);									// name
 }
 
 // BRANCH ( -- ) Compiled by some words such as ELSE and REPEAT.
@@ -4522,37 +4295,6 @@ DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
 DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "( -- v ) The version number of this system."),
 DEF_FORTH_WORD(0, 0, 0, 0)
-};
-
-// -----------------------------------------------------------------------------------------------
-//						            Minimal (ROOT) List
-// -----------------------------------------------------------------------------------------------
-const forth_vocabulary_entry_t forth_wl_root[] =
-{
-DEF_FORTH_WORD("words",      		0, forth_words,         				"( -- )"),
-#if !defined(FORTH_WITHOUT_COMPILATION)
-DEF_FORTH_WORD( "definitions",		0, forth_definitions,      	 			"( -- )"),
-DEF_FORTH_WORD("forth-wordlist",	0, forth_forth_wordlist,     			"( -- wid )" ),
-DEF_FORTH_WORD("wordlist",			0, forth_wordlist,     					"( -- wid )" ),
-DEF_FORTH_WORD("order",  			0, forth_order,                       	"( -- )" ),
-DEF_FORTH_WORD("only",   			0, forth_only,                        	"( -- )" ),
-DEF_FORTH_WORD("also",   			0, forth_also,                        	"( -- )" ),
-DEF_FORTH_WORD("previous",   		0, forth_previous,                		"( -- )" ),
-DEF_FORTH_WORD("get-current",		0, forth_get_current,           		"( -- wid )" ),
-DEF_FORTH_WORD("set-current",		0, forth_set_current,           		"( wid -- )" ),
-DEF_FORTH_WORD("set-order",			0, forth_set_order,               		"( WIDn ... WID2 WID1 n -- )" ),
-DEF_FORTH_WORD("get-order",			0, forth_get_order,               		"( -- WIDn ... WID2 WID1 n )" ),
-#else
-DEF_FORTH_WORD("only",   			0, forth_noop,                        	"( -- )" ),
-#endif
-DEF_FORTH_WORD( "bye",				0, forth_bye,           				"( -- )"),
-DEF_FORTH_WORD( "forth",  	 		0, forth_forth,      	 				"( -- )"),
-DEF_FORTH_WORD(0, 0, 0, 0)
-};
-
-forth_wordlist_t forth_root_wordlist =
-{
-	0, 0 , (forth_cell_t) "Root"
 };
 
 // Some headers (used as execution tokens) that the system needs to refer to from C code.

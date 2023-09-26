@@ -30,6 +30,241 @@
 #include <forth.h>
 #include <forth_internal.h>
 
+// -----------------------------------------------------------------------------------------------------
+//                                              Search order stuff
+// -----------------------------------------------------------------------------------------------------
+// FORTH ( -- )
+void forth_forth(forth_runtime_context_t *ctx)
+{
+	if ((0 == ctx->dictionary) || (0 == ctx->wordlists) || (0 == ctx->wordlist_slots) || (0 == ctx->wordlist_cnt))
+	{
+		return;	// Silently ignore problems, in case FORTH is executed in an interpret-only script.
+	}
+
+	ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt] = (forth_cell_t)&(ctx->dictionary->forth_wl);
+}
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
+// Initialize search order to something sane.
+//
+int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots)
+{
+	if ((0 == wordlists) || (slots < 8))
+	{
+		return -1;
+	}
+
+	if (0 == ctx->dictionary)
+	{
+		return -1;
+	}
+
+	ctx->wordlists = wordlists;
+	ctx->wordlist_slots = slots;
+	ctx->wordlist_cnt = 2;
+	ctx->wordlists[slots - 1] = (forth_cell_t)&forth_root_wordlist;
+	ctx->wordlists[slots - 2] = (forth_cell_t)&(ctx->dictionary->forth_wl);
+	ctx->current =	(forth_cell_t)&(ctx->dictionary->forth_wl);
+
+	return 0;
+}
+
+// FORTH-WORDLIST ( -- wid )
+void forth_forth_wordlist(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+	forth_PUSH(ctx, (forth_cell_t)&(ctx->dictionary->forth_wl));
+}
+
+// GET-CURRENT ( -- wid )
+void forth_get_current(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, ctx->current);
+}
+
+// SET-CURRENT ( wid -- )
+void forth_set_current(forth_runtime_context_t *ctx)
+{
+	forth_cell_t wid = forth_POP(ctx);
+
+	// We do NOT allow adding to the 'Root' worlist, it is only a place holder.
+	if (((forth_cell_t)&forth_root_wordlist) == wid)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	ctx->current = wid;
+}
+
+// DEFINITIONS ( -- )
+void forth_definitions(forth_runtime_context_t *ctx)
+{
+	if ((0 == ctx->wordlists) || (0 == ctx->wordlist_slots) || (0 == ctx->wordlist_cnt))
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	forth_PUSH(ctx, ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt]);
+	forth_set_current(ctx);
+}
+
+// ORDER ( -- )
+void forth_order(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+	forth_cell_t i;
+	const char *name;
+	forth_wordlist_t *wid;
+
+	if ((0 == ctx->dictionary) || (0 == cnt))
+	{
+		return;
+	}
+
+	for (i = 1; i <= cnt; i++)
+	{
+		wid = (forth_wordlist_t *)(ctx->wordlists[ctx->wordlist_slots - i]);
+		name = (const char *)(wid->name);
+
+		if ((0 == name) || (0 == *name)) // Noname wordlist
+		{
+			forth_TYPE0(ctx, "WID:0X");
+			forth_HDOT(ctx, (forth_cell_t)wid);
+		}
+		else
+		{
+			forth_TYPE0(ctx, name);
+			forth_space(ctx);
+		}
+	}
+	forth_cr(ctx);
+}
+
+// GET-ORDER ( -- WIDn ... WID2 WID1 n)
+void forth_get_order(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+	forth_cell_t i;
+
+	if ((0 == ctx->dictionary) || (0 == cnt) || (0 == ctx->wordlists))
+	{
+		forth_PUSH(ctx, 0);
+		return;
+	}
+
+	for (i = 1; i <= cnt; i++)
+	{
+		forth_PUSH(ctx, ctx->wordlists[ctx->wordlist_slots - i]);
+	}
+
+	forth_PUSH(ctx, cnt);
+}
+
+// ALSO ( -- )
+void forth_also(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	if (((cnt + 1) > ctx->wordlist_slots)  || (0 == ctx->wordlists))
+	{
+		forth_THROW(ctx, -49); // search-order overflow
+	}
+
+	cnt += 1;
+	ctx->wordlists[ctx->wordlist_slots - cnt] = ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt ];
+	ctx->wordlist_cnt = cnt;
+}
+
+// PREVIOUS ( -- )
+void forth_previous(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = ctx->wordlist_cnt;
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	if (1 > cnt)
+	{
+		forth_THROW(ctx, -50); // search-order underflow
+	}
+
+	ctx->wordlist_cnt = cnt - 1;
+}
+
+// ONLY ( -- )
+void forth_only(forth_runtime_context_t *ctx)
+{
+	if ((1 > ctx->wordlist_slots)  || (0 == ctx->wordlists))
+	{
+		forth_THROW(ctx, -49); // search-order overflow
+	}
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	ctx->wordlist_cnt = 1;
+	ctx->wordlists[ctx->wordlist_slots - 1] = (forth_cell_t)&forth_root_wordlist;
+}
+
+// SET-ORDER ( WIDn ... WID2 WID1 n -- )
+void forth_set_order(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = forth_POP(ctx);
+	forth_cell_t i;
+
+	if (-1 == (forth_scell_t)cnt)
+	{
+		forth_only(ctx);
+		return;
+	}
+
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	if ((cnt > ctx->wordlist_slots)  || (0 == ctx->wordlists))
+	{
+		forth_THROW(ctx, -49); // search-order overflow
+	}
+
+	ctx->wordlist_cnt = cnt;
+
+	for (i = cnt; i >= 1; i--)
+	{
+		ctx->wordlists[ctx->wordlist_slots - i] = forth_POP(ctx);
+	}
+}
+
+// WORDLIST ( -- wid )
+void forth_wordlist(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+	forth_align(ctx);
+	forth_here(ctx);
+	forth_COMMA(ctx, 0);									// latest
+	forth_COMMA(ctx, (forth_cell_t)forth_GET_LATEST(ctx));	// parent
+	forth_COMMA(ctx, 0);									// name
+}
+
+#endif
+
 // Compare a name (stored as a zero terminad string) to an input token (given as a c-addr, length pair)
 // if they match (compare the same in a case insensitive comparison).
 // Returns -1 (true) if the names match.
@@ -48,7 +283,7 @@ int forth_COMPARE_NAMES(const char *name, const char *input_word, int input_word
 
 // Find a name in a list (array) of names.
 // Return the address of the entry that matches the name or zero (NULL) if the name is not found.
-const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length)
+const forth_vocabulary_entry_t *forth_SEARCH_COMPILED_IN_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length)
 {
     const forth_vocabulary_entry_t *p;
 
@@ -62,6 +297,25 @@ const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t
         if (forth_COMPARE_NAMES((char *)(p->name), name, name_length))
         {
             return p;
+        }
+    }
+
+    return 0;
+}
+
+// Search the compiled in master table.
+const forth_vocabulary_entry_t *forth_SEARCH_MASTER_TABLE(const char *name, int name_length)
+{
+    const forth_vocabulary_entry_t **wl;
+    const forth_vocabulary_entry_t *ep = 0;
+
+    for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
+    {
+        ep = forth_SEARCH_COMPILED_IN_LIST(*wl, name, (int)name_length);
+
+        if (0 != ep)
+        {
+            return ep;
         }
     }
 
@@ -85,6 +339,59 @@ forth_vocabulary_entry_t *forth_SEARCH_WORDLIST(forth_wordlist_t *wid, const cha
         p = (forth_vocabulary_entry_t *)(p->link); 
     }
     return 0;
+}
+
+
+
+// SEARCH-WORDLIST ( c-addr u wid -- 0 | xt 1 | xt -1 )
+void forth_search_wordlist(struct forth_runtime_context *ctx)
+{
+    forth_wordlist_t *wid = (forth_wordlist_t *)forth_POP(ctx);
+    forth_cell_t len = forth_POP(ctx);
+    const char *name = (const char *)forth_POP(ctx);
+    const forth_vocabulary_entry_t *ep;
+
+    if (0 == wid)
+    {
+        forth_THROW(ctx, -9); // invalid memory address
+    }
+
+    ep = forth_SEARCH_WORDLIST(wid, name, len);
+
+    if ((0 == ep) && (0 != ctx->dictionary) && ((forth_wordlist_t *)&(ctx->dictionary->forth_wl) == wid))
+    {
+        ep = forth_SEARCH_MASTER_TABLE(name, len);
+
+        if (0 == ep)
+        {
+            ep = forth_SEARCH_COMPILED_IN_LIST(forth_wl_root, name, (int)len);
+        }
+    }
+
+    if ((&forth_root_wordlist == wid) && (0 == ep))
+    {
+       ep = forth_SEARCH_COMPILED_IN_LIST(forth_wl_root, name, (int)len); 
+    }
+
+    if (0 == ep)
+    {
+        forth_PUSH(ctx, 0);
+    }
+    else
+    {
+        forth_PUSH(ctx, (forth_cell_t)ep);
+
+        if ( 0 != (FORTH_XT_FLAGS_IMMEDIATE & ep->flags))
+        {
+            // IMMEDIATE word.
+            forth_PUSH(ctx, 1);
+        }
+        else
+        {
+            // Non-IMMEDIATE word.
+            forth_PUSH(ctx, -1);
+        }
+    }
 }
 
 // Search all available lists for the name (passed as a c-addr, len pain or the data stack).
@@ -117,20 +424,17 @@ const forth_vocabulary_entry_t *forth_FIND_NAME(struct forth_runtime_context *ct
 
             if (wid == (forth_wordlist_t *)&(ctx->dictionary->forth_wl))
             {
-                for (wl = forth_master_list_of_lists; 0 != *wl; wl++)
-                {
-                    ep = forth_SEARCH_LIST(*wl, name, (int)len);
+                ep = forth_SEARCH_MASTER_TABLE(name, len);
 
-                    if (0 != ep)
-                    {
-                        return ep;
-                    }
+                if (0 != ep)
+                {
+                    return ep;
                 }
 
                 // Root is sort of part of Forth, so search it here.
                 if (0 == root_searched)
                 {
-                    ep = forth_SEARCH_LIST(forth_wl_root, name, (int)len);
+                    ep = forth_SEARCH_COMPILED_IN_LIST(forth_wl_root, name, (int)len);
                     root_searched = 1;
                     if (0 != ep)
                     {
@@ -143,7 +447,7 @@ const forth_vocabulary_entry_t *forth_FIND_NAME(struct forth_runtime_context *ct
             if ((wid == (forth_wordlist_t *)&forth_root_wordlist) && (0 == root_searched))
             {
                 // Root was specifically in the search order.
-                ep = forth_SEARCH_LIST(forth_wl_root, name, (int)len);
+                ep = forth_SEARCH_COMPILED_IN_LIST(forth_wl_root, name, (int)len);
                 root_searched = 1;
 
                 if (0 != ep)
@@ -157,7 +461,7 @@ const forth_vocabulary_entry_t *forth_FIND_NAME(struct forth_runtime_context *ct
     if (0 == root_searched)
     {
         // As a last resort search Root.
-        ep = forth_SEARCH_LIST(forth_wl_root, name, (int)len);
+        ep = forth_SEARCH_COMPILED_IN_LIST(forth_wl_root, name, (int)len);
     }
 
     return ep;
@@ -307,3 +611,35 @@ void forth_words(forth_runtime_context_t *ctx)
 
     forth_cr(ctx);
 }
+
+// -----------------------------------------------------------------------------------------------
+//						            Minimal (ROOT) List
+// -----------------------------------------------------------------------------------------------
+const forth_vocabulary_entry_t forth_wl_root[] =
+{
+DEF_FORTH_WORD("words",      		0, forth_words,         				"( -- )"),
+#if !defined(FORTH_WITHOUT_COMPILATION)
+DEF_FORTH_WORD( "definitions",		0, forth_definitions,      	 			"( -- )"),
+DEF_FORTH_WORD("forth-wordlist",	0, forth_forth_wordlist,     			"( -- wid )" ),
+DEF_FORTH_WORD("wordlist",			0, forth_wordlist,     					"( -- wid )" ),
+DEF_FORTH_WORD("order",  			0, forth_order,                       	"( -- )" ),
+DEF_FORTH_WORD("only",   			0, forth_only,                        	"( -- )" ),
+DEF_FORTH_WORD("also",   			0, forth_also,                        	"( -- )" ),
+DEF_FORTH_WORD("previous",   		0, forth_previous,                		"( -- )" ),
+DEF_FORTH_WORD("get-current",		0, forth_get_current,           		"( -- wid )" ),
+DEF_FORTH_WORD("set-current",		0, forth_set_current,           		"( wid -- )" ),
+DEF_FORTH_WORD("set-order",			0, forth_set_order,               		"( WIDn ... WID2 WID1 n -- )" ),
+DEF_FORTH_WORD("get-order",			0, forth_get_order,               		"( -- WIDn ... WID2 WID1 n )" ),
+#else
+DEF_FORTH_WORD("only",   			0, forth_noop,                        	"( -- )" ),
+#endif
+DEF_FORTH_WORD( "bye",				0, forth_bye,           				"( -- )"),
+DEF_FORTH_WORD("search-wordlist",   0, forth_search_wordlist,               "( c-addr u wid -- 0 | xt 1 | xt -1 )"),
+DEF_FORTH_WORD( "forth",  	 		0, forth_forth,      	 				"( -- )"),
+DEF_FORTH_WORD(0, 0, 0, 0)
+};
+
+forth_wordlist_t forth_root_wordlist =
+{
+	0, 0 , (forth_cell_t) "Root"
+};

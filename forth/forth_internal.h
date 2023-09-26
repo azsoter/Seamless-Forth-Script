@@ -195,6 +195,10 @@ extern void forth_forth(forth_runtime_context_t *ctx);
 
 extern int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth_cell_t *sp_max, forth_cell_t *rp_min, forth_cell_t *rp_max);
 
+extern int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value);
+extern int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value);
+extern int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value);
+
 extern void forth_PRINT_TRACE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern forth_scell_t forth_CATCH(forth_runtime_context_t *ctx, forth_xt_t xt);
@@ -203,7 +207,7 @@ extern void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code);
 extern forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t *ctx);
 extern int forth_COMPARE_NAMES(const char *name, const char *input_word, int input_word_length);
 
-extern const forth_vocabulary_entry_t *forth_SEARCH_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length);
+extern const forth_vocabulary_entry_t *forth_SEARCH_COMPILED_IN_LIST(const forth_vocabulary_entry_t *list, const char *name, int name_length);
 
 extern void forth_CHECK_STACK_AT_LEAST(forth_runtime_context_t *ctx, forth_cell_t n);
 extern void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code);
