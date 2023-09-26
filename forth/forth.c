@@ -2751,9 +2751,13 @@ forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 	dict->dp = 0;
 	length -= FORTH_ALIGN(sizeof(forth_dictionary_t));
 	dict->dp_max = length;
-	dict->forth_wl.name = (forth_cell_t)&(dict->items);
+	dict->forth_wl.link		= (forth_cell_t)&forth_root_wordlist;
+	dict->forth_wl.parent	= (forth_cell_t)&forth_root_wordlist;
+	dict->forth_wl.name		= (forth_cell_t)&(dict->items);
 	memcpy(dict->items, "Forth", 6);
 	dict->dp += FORTH_ALIGN(6);
+	dict->last_wordlist = (forth_cell_t)&(dict->forth_wl);
+	
 	return dict;
 }
 

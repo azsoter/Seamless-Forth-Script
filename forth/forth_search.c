@@ -259,11 +259,41 @@ void forth_wordlist(forth_runtime_context_t *ctx)
 	forth_align(ctx);
 	forth_here(ctx);
 	forth_COMMA(ctx, 0);									// latest
-	forth_COMMA(ctx, (forth_cell_t)forth_GET_LATEST(ctx));	// parent
+    forth_COMMA(ctx, ctx->dictionary->last_wordlist);		// link
+	forth_COMMA(ctx, ctx->current);                         // parent
 	forth_COMMA(ctx, 0);									// name
+    ctx->dictionary->last_wordlist = ctx->sp[0];
 }
 
+// .WORDLISTS ( -- ) List all wordlists
+void forth_dot_wordlists(forth_runtime_context_t *ctx)
+{
+    forth_wordlist_t *wid;
+
+    if (0 == ctx->dictionary)
+    {
+        return;
+    }
+
+    for (wid = (forth_wordlist_t *)(ctx->dictionary->last_wordlist); 0 != wid; wid = (forth_wordlist_t *)wid->link)
+    {
+        if ((0 == wid->name) || (0 == *(const char *)(wid->name)))
+        {
+            forth_TYPE0(ctx,"WID:0X");
+            forth_PUSH(ctx, (forth_cell_t)wid);
+            forth_hdot(ctx);
+        }
+        else
+        {
+            forth_TYPE0(ctx, (const char *)(wid->name));
+            forth_space(ctx);
+        }
+    }
+}
 #endif
+// ----------------------------------------------------------------------------------------------------
+//                                      Searching definition names
+// ----------------------------------------------------------------------------------------------------
 
 // Compare a name (stored as a zero terminad string) to an input token (given as a c-addr, length pair)
 // if they match (compare the same in a case insensitive comparison).
@@ -630,6 +660,7 @@ DEF_FORTH_WORD("get-current",		0, forth_get_current,           		"( -- wid )" ),
 DEF_FORTH_WORD("set-current",		0, forth_set_current,           		"( wid -- )" ),
 DEF_FORTH_WORD("set-order",			0, forth_set_order,               		"( WIDn ... WID2 WID1 n -- )" ),
 DEF_FORTH_WORD("get-order",			0, forth_get_order,               		"( -- WIDn ... WID2 WID1 n )" ),
+DEF_FORTH_WORD(".wordlists",  		0, forth_dot_wordlists,                 "( -- )" ),
 #else
 DEF_FORTH_WORD("only",   			0, forth_noop,                        	"( -- )" ),
 #endif
@@ -641,5 +672,5 @@ DEF_FORTH_WORD(0, 0, 0, 0)
 
 forth_wordlist_t forth_root_wordlist =
 {
-	0, 0 , (forth_cell_t) "Root"
+	0, 0, 0 , (forth_cell_t) "Root"
 };

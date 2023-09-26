@@ -67,19 +67,21 @@ typedef forth_vocabulary_entry_t *forth_xt_t;
 
 struct forth_wordlist_s
 {
-	forth_cell_t latest;
-	forth_cell_t parent;
-	forth_cell_t name;
+	forth_cell_t latest;		// The last defined word in this wordlist.
+	forth_cell_t link;			// For a linked list of all wordlists.
+	forth_cell_t parent;		// Parent wordlist (CURRENT when this wordlist was created).
+	forth_cell_t name;			// The name of the wordlist (optional).
 };
 
 typedef struct forth_wordlist_s forth_wordlist_t;
 
 struct forth_dictionary
 {
-	forth_ucell_t	dp;			// An index to items.
-	forth_ucell_t	dp_max;		// Max value of dp.
-	forth_wordlist_t forth_wl;  // FORTH-WORDLIST
-	uint8_t 		items[1];	// Place holder for the rest of the dictionary.
+	forth_ucell_t	 dp;			// An index to items.
+	forth_ucell_t	 dp_max;		// Max value of dp.
+	forth_wordlist_t forth_wl;  	// FORTH-WORDLIST
+	forth_cell_t	 last_wordlist;	// Link to the most recently defined wordlist.
+	uint8_t 		 items[1];		// Place holder for the rest of the dictionary.
 };
 
 typedef struct forth_dictionary forth_dictionary_t;
