@@ -265,6 +265,39 @@ void forth_wordlist(forth_runtime_context_t *ctx)
     ctx->dictionary->last_wordlist = ctx->sp[0];
 }
 
+// Compiled by VOCABULARY
+// (do-voc) ( addr -- )
+void forth_do_voc(forth_runtime_context_t *ctx)
+{
+    if ((0 == ctx->dictionary) || (0 == ctx->wordlists) || (0 == ctx->wordlist_slots) || (0 == ctx->wordlist_cnt))
+	{
+		forth_THROW(ctx, -21); // unsupported operation
+	}
+
+    // We don't need the fetch.
+    // The original idea was to store WID at the body of create, but the wordlist is created so that
+    // the WID is the same as the addres of the CREATEd word.
+    // forth_fetch(ctx);
+    ctx->wordlists[ctx->wordlist_slots - ctx->wordlist_cnt] = forth_POP(ctx);
+}
+
+// Define a vocabulary.
+// A vocabulary includes a wordlist and when executed it behaves like the word "FORTH", i.e.
+// replaces the top of the search order with this wordlist.
+// VOCABULARY ( "name" -- )
+void forth_vocabulary(forth_runtime_context_t *ctx)
+{
+    forth_vocabulary_entry_t *entry;
+    forth_wordlist_t *wid;
+
+    forth_create(ctx);
+    entry = forth_GET_LATEST(ctx);
+    forth_wordlist(ctx);
+    wid = (forth_wordlist_t *)forth_POP(ctx);
+    wid->name = entry->name;
+    entry->meaning = (forth_cell_t)forth_DO_VOC_xt;
+}
+
 // .WORDLISTS ( -- ) List all wordlists
 void forth_dot_wordlists(forth_runtime_context_t *ctx)
 {
@@ -661,6 +694,7 @@ DEF_FORTH_WORD("set-current",		0, forth_set_current,           		"( wid -- )" ),
 DEF_FORTH_WORD("set-order",			0, forth_set_order,               		"( WIDn ... WID2 WID1 n -- )" ),
 DEF_FORTH_WORD("get-order",			0, forth_get_order,               		"( -- WIDn ... WID2 WID1 n )" ),
 DEF_FORTH_WORD(".wordlists",  		0, forth_dot_wordlists,                 "( -- )" ),
+DEF_FORTH_WORD("vocabulary",  		0, forth_vocabulary,                    "( \"name\" -- )" ),
 #else
 DEF_FORTH_WORD("only",   			0, forth_noop,                        	"( -- )" ),
 #endif

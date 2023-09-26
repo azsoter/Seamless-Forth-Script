@@ -177,6 +177,7 @@ extern const forth_xt_t forth_pLOOP_xt;
 extern const forth_xt_t forth_ppLOOP_xt;
 extern const forth_xt_t forth_pDOES_xt;
 extern const forth_xt_t forth_pABORTq_xt;
+extern const forth_xt_t forth_DO_VOC_xt;
 
 extern forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length);
 extern int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots);
@@ -191,6 +192,7 @@ extern void forth_also(forth_runtime_context_t *ctx);
 extern void forth_only(forth_runtime_context_t *ctx);
 extern void forth_previous(forth_runtime_context_t *ctx);
 extern void forth_wordlist(forth_runtime_context_t *ctx);
+extern void forth_do_voc(forth_runtime_context_t *ctx);
 
 #endif
 extern void forth_forth(forth_runtime_context_t *ctx);

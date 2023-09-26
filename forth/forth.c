@@ -2757,7 +2757,7 @@ forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 	memcpy(dict->items, "Forth", 6);
 	dict->dp += FORTH_ALIGN(6);
 	dict->last_wordlist = (forth_cell_t)&(dict->forth_wl);
-	
+
 	return dict;
 }
 
@@ -4324,6 +4324,7 @@ DEF_FORTH_WORD("(LOOP)",	 0, forth_loop_rt,		 " ( -- )"),							// 13
 DEF_FORTH_WORD("(+LOOP)",	 0, forth_plus_loop_rt,	 " ( inc -- )"),						// 14
 DEF_FORTH_WORD("(does>)",    0, forth_p_does,        "( -- )"),								// 15
 DEF_FORTH_WORD("(abort\")",  0, forth_pabortq,       "( f c-addr len -- )"),				// 16
+DEF_FORTH_WORD( "(do-voc)",	 0, forth_do_voc,	 	 "( addr -- )"),						// 17
 #endif
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
@@ -4348,6 +4349,7 @@ const forth_xt_t forth_pLOOP_xt				= (const forth_xt_t)&(forth_wl_system[13]);
 const forth_xt_t forth_ppLOOP_xt			= (const forth_xt_t)&(forth_wl_system[14]);
 const forth_xt_t forth_pDOES_xt				= (const forth_xt_t)&(forth_wl_system[15]);
 const forth_xt_t forth_pABORTq_xt			= (const forth_xt_t)&(forth_wl_system[16]);
+const forth_xt_t forth_DO_VOC_xt			= (const forth_xt_t)&(forth_wl_system[17]);
 #endif
 // -----------------------------------------------------------------------------------------------
 
