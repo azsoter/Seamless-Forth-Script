@@ -189,48 +189,11 @@ void forth_execute(forth_runtime_context_t *ctx)
 	forth_EXECUTE(ctx, xt);
 }
 
-#if 0
-// Interpreter for threaded code.
-void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
-{
-	forth_cell_t *caller_ip = ctx->ip;
-	forth_xt_t x;
-
-	ctx->ip = &(xt->meaning);
-
-	while (0 != *(ctx->ip))
-	{
-		x = (forth_xt_t)*(ctx->ip++);
-		forth_EXECUTE(ctx, x);
-	}
-
-	ctx->ip = caller_ip;
-}
-#else
-/*
 // Interpreter for threaded code.
 void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
 	forth_xt_t x;
 
-	forth_RPUSH(ctx, (forth_cell_t)(ctx->ip));
-
-	ctx->ip = &(xt->meaning);
-
-	while (0 != *(ctx->ip))
-	{
-		x = (forth_xt_t)*(ctx->ip++);
-		forth_EXECUTE(ctx, x);
-	}
-
-	ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
-}
-*/
-// Interpreter for threaded code.
-void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
-{
-	forth_xt_t x;
-	//forth_TYPE0(ctx,"ip = "); forth_HDOT(ctx, ctx->ip);
 	forth_RPUSH(ctx, (forth_cell_t)(ctx->ip));
 	ctx->ip = &(xt->meaning);
 
@@ -251,10 +214,8 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 			}
 		}
 		ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
-		// forth_TYPE0(ctx,"ip = "); forth_HDOT(ctx, ctx->ip);
 	}
 }
-#endif
 
 #if !defined(FORTH_WITHOUT_COMPILATION)
 // EXIT ( -- )
@@ -4348,7 +4309,7 @@ DEF_FORTH_WORD( "sp!",  	 0, forth_sp_store,      "( sp -- )"),
 DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
 DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
-DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, "( -- v ) The version number of this system."),
+DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "( -- v ) The version number of this system."),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
