@@ -189,6 +189,85 @@ void forth_execute(forth_runtime_context_t *ctx)
 	forth_EXECUTE(ctx, xt);
 }
 
+#if 0
+// Interpreter for threaded code.
+void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_cell_t *caller_ip = ctx->ip;
+	forth_xt_t x;
+
+	ctx->ip = &(xt->meaning);
+
+	while (0 != *(ctx->ip))
+	{
+		x = (forth_xt_t)*(ctx->ip++);
+		forth_EXECUTE(ctx, x);
+	}
+
+	ctx->ip = caller_ip;
+}
+#else
+/*
+// Interpreter for threaded code.
+void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_xt_t x;
+
+	forth_RPUSH(ctx, (forth_cell_t)(ctx->ip));
+
+	ctx->ip = &(xt->meaning);
+
+	while (0 != *(ctx->ip))
+	{
+		x = (forth_xt_t)*(ctx->ip++);
+		forth_EXECUTE(ctx, x);
+	}
+
+	ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
+}
+*/
+// Interpreter for threaded code.
+void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_xt_t x;
+	//forth_TYPE0(ctx,"ip = "); forth_HDOT(ctx, ctx->ip);
+	forth_RPUSH(ctx, (forth_cell_t)(ctx->ip));
+	ctx->ip = &(xt->meaning);
+
+	while (0 != ctx->ip)
+	{
+		while (0 != *(ctx->ip))
+		{
+			x = (forth_xt_t)*(ctx->ip++);
+
+			if (FORTH_XT_FLAGS_ACTION_THREADED == (x->flags & FORTH_XT_FLAGS_ACTION_MASK))
+			{
+				forth_RPUSH(ctx, (forth_cell_t)(ctx->ip));
+				ctx->ip = &(x->meaning);
+			}
+			else
+			{
+				forth_EXECUTE(ctx, x);
+			}
+		}
+		ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
+		// forth_TYPE0(ctx,"ip = "); forth_HDOT(ctx, ctx->ip);
+	}
+}
+#endif
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
+// EXIT ( -- )
+// Given the implementation of the inner interpreter (above) in order to exit some threaded code
+// we just need to point ctx->ip to a cell that is set to 0.
+// So this implementation will work.
+void forth_exit(forth_runtime_context_t *ctx)
+{
+	static const forth_cell_t the_end = 0;
+	ctx->ip = (forth_cell_t *)&the_end;
+}
+#endif
+
 // (TRACE) ( -- addr )
 void forth_paren_trace(forth_runtime_context_t *ctx)
 {
@@ -3020,35 +3099,6 @@ void forth_plus_loop(forth_runtime_context_t *ctx)
 	here = (forth_cell_t *)forth_POP(ctx);
 	*do_addr = (forth_cell_t)((here + 1) - do_addr);
 	forth_COMMA(ctx, (forth_cell_t)((do_addr + 1) - here));
-}
-#endif
-
-// Interpreter for threaded code.
-void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
-{
-	forth_cell_t *caller_ip = ctx->ip;
-	forth_xt_t x;
-
-	ctx->ip = &(xt->meaning);
-
-	while (0 != *(ctx->ip))
-	{
-		x = (forth_xt_t)*(ctx->ip++);
-		forth_EXECUTE(ctx, x);
-	}
-
-	ctx->ip = caller_ip;
-}
-
-#if !defined(FORTH_WITHOUT_COMPILATION)
-// EXIT ( -- )
-// Given the implementation of the inner interpreter (above) in order to exit some threaded code
-// we just need to point ctx->ip to a cell that is set to 0.
-// So this implementation will work.
-void forth_exit(forth_runtime_context_t *ctx)
-{
-	static const forth_cell_t the_end = 0;
-	ctx->ip = (forth_cell_t *)&the_end;
 }
 #endif
 
