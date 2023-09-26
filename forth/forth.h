@@ -32,7 +32,25 @@
 
 typedef struct forth_runtime_context forth_runtime_context_t;
 typedef void (*forth_behavior_t)(forth_runtime_context_t *ctx);
+typedef struct forth_dictionary forth_dictionary_t;
 
-extern int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack);
+struct forth_context_init_data
+{
+    forth_dictionary_t *dictionary;         // An already initialized Forth dictionary.
+    forth_cell_t *data_stack;               // The lowest address in the data stack area. 
+    forth_cell_t *return_stack;             // The highest address in the data stack area. 
+    forth_cell_t data_stack_cell_count;     // The size of the data stack in cells.
+    forth_cell_t return_stack_cell_count;   // The size of the data stack in cells.
+    forth_cell_t *search_order;             // The address of the cells to be used for search order.
+    forth_cell_t search_order_slots;        // The number of cells in the search order area.
+};
+typedef struct forth_context_init_data forth_context_init_data_t;
+
+extern forth_cell_t forth_GetContextSize(void);
+
+extern forth_scell_t forth_InitContext(forth_runtime_context_t *ctx, const forth_context_init_data_t *init_data);
+extern forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length);
+
+extern forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack);
 
 #endif

@@ -2736,6 +2736,7 @@ void forth_right_bracket(forth_runtime_context_t *ctx)
 //                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
 #if !defined(FORTH_WITHOUT_COMPILATION)
+// Initalize a memory area to be used as a Forth Dictionary.
 forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
 {
 	forth_dictionary_t *dict;
@@ -4352,30 +4353,47 @@ const forth_xt_t forth_pABORTq_xt			= (const forth_xt_t)&(forth_wl_system[16]);
 const forth_xt_t forth_DO_VOC_xt			= (const forth_xt_t)&(forth_wl_system[17]);
 #endif
 // -----------------------------------------------------------------------------------------------
-
-int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth_cell_t *sp_max, forth_cell_t *rp_min, forth_cell_t *rp_max)
+forth_cell_t forth_GetContextSize(void)
 {
-	if ((0 == ctx) || (0 == sp_min) || (0 == sp_max) || (0 == rp_min) || (0 == rp_max))
+	return (forth_cell_t)sizeof(forth_runtime_context_t);
+}
+
+forth_scell_t forth_InitContext(forth_runtime_context_t *ctx, const forth_context_init_data_t *init_data)
+{
+	int res;
+
+	if ((0 == ctx) || (0 == init_data->data_stack) || (0 == init_data->return_stack) ||
+	    (8 > init_data->data_stack_cell_count) || (8 > init_data->return_stack_cell_count))
 	{
 		return -1;
 	}
-	
+
 	memset(ctx, 0, sizeof(forth_runtime_context_t));
 
 	ctx->base = 10;			// Set base to decimal.
 	ctx->ip = 0;
-	ctx->sp_max = sp_max;
-	ctx->sp_min = sp_min;
-	ctx->sp0    = sp_max;
-	ctx->sp     = sp_max;
+	ctx->sp_max = init_data->data_stack + (init_data->data_stack_cell_count - 1);
+	ctx->sp_min = init_data->data_stack;
+	ctx->sp0    = ctx->sp_max;
+	ctx->sp     = ctx->sp_max;
 
-	ctx->rp_max = rp_max;
-	ctx->rp_min = rp_min;
-	ctx->rp0    = rp_max;
-	ctx->rp     = rp_max;
+	ctx->rp_max = init_data->return_stack + (init_data->return_stack_cell_count - 1);
+	ctx->rp_min = init_data->return_stack;
+	ctx->rp0    = ctx->rp_max;
+	ctx->rp     = ctx->rp_max;
 
 	forth_less_hash(ctx);	// Initialize the number formatting buffer so accidentally typed in HOLD, etc. does not crash.
 
+#if !defined(FORTH_WITHOUT_COMPILATION)
+	ctx->dictionary = init_data->dictionary;
+
+	res = forth_InitSearchOrder(ctx, init_data->search_order, init_data->search_order_slots);
+
+	if (0 > res)
+	{
+		return res;
+	}
+#endif
 	return 0;
 }
 
@@ -4384,7 +4402,7 @@ int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth
 // A flag is passed to indicate if the data stack in the context needs to be emtied before running the command.
 //
 // This function returns 0 on success and a non-zero value (which is a code from CATCH/THROW) if an error has occured.
-int forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack)
+forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack)
 {
     forth_cell_t res;
     jmp_buf frame;

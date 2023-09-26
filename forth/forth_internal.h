@@ -39,6 +39,7 @@
 
 #define FORTH_CHAR_SPACE 0x20
 
+// A vocabulary entry (word header) which is also used as an XT (execution token) in this implementation.
 struct forth_vocabulary_entry_struct
 {
     forth_cell_t name;
@@ -65,6 +66,7 @@ typedef forth_vocabulary_entry_t *forth_xt_t;
 #define	FORTH_XT_FLAGS_ACTION_THREADED	0x04
 #define	FORTH_XT_FLAGS_ACTION_CREATE	0x05
 
+// A wordlist (as in the structure create by the word WORDLIST in the SEARCH ORDER word set).
 struct forth_wordlist_s
 {
 	forth_cell_t latest;		// The last defined word in this wordlist.
@@ -75,6 +77,7 @@ struct forth_wordlist_s
 
 typedef struct forth_wordlist_s forth_wordlist_t;
 
+// The structure of the forth dictionary area.
 struct forth_dictionary
 {
 	forth_ucell_t	 dp;			// An index to items.
@@ -84,8 +87,7 @@ struct forth_dictionary
 	uint8_t 		 items[1];		// Place holder for the rest of the dictionary.
 };
 
-typedef struct forth_dictionary forth_dictionary_t;
-
+// The runtime context passed to each and every function implementing a forth word.
 struct forth_runtime_context
 {
 	forth_dictionary_t *dictionary;
@@ -179,7 +181,6 @@ extern const forth_xt_t forth_pDOES_xt;
 extern const forth_xt_t forth_pABORTq_xt;
 extern const forth_xt_t forth_DO_VOC_xt;
 
-extern forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length);
 extern int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots);
 extern void forth_forth_wordlist(forth_runtime_context_t *ctx);
 extern void forth_get_current(forth_runtime_context_t *ctx);
@@ -196,8 +197,6 @@ extern void forth_do_voc(forth_runtime_context_t *ctx);
 
 #endif
 extern void forth_forth(forth_runtime_context_t *ctx);
-
-extern int forth_InitContext(forth_runtime_context_t *ctx, forth_cell_t *sp_min , forth_cell_t *sp_max, forth_cell_t *rp_min, forth_cell_t *rp_max);
 
 extern int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value);
 extern int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value);
