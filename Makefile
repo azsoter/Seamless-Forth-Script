@@ -18,10 +18,14 @@ default: test
 test: $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o test $(LDFLAGS)
 
+run-tests:	test quick-tests.txt
+	./test <quick-tests.txt >results.txt
+
 .PHONY: clean
 
 clean:
-	$(RM) *.o *.d test test.map
+	$(RM) *.o *.d test test.map results.txt
+
 
 
 	

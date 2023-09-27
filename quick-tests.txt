@@ -1,0 +1,29 @@
+: .separator ." \ ---------------------------------------------------------------------------------------------" cr ;
+: T" .separator ." \ " " type cr ." \ " ;
+T" Threaded code calling threaded code."
+: (t1) 1 2 + . ; : t1 3 4 + . (t1) 5 6 + . ; see t1 t1
+
+T" Do loop test."
+: lt2 3 0 do -2 0 do [char] ( emit i . j . [char] ) emit space -1 +loop loop ; see lt2 cr lt2
+
+T" ?DO Tests "
+: ?doT ?do i . loop ; see ?doT cr 2 2 ?doT cr 4 2 ?doT
+
+T" Test for leave."
+: t3 10 0 do i . i 6 = if leave then loop ; see t3 t3
+
+T" EXECUTE called from threaded code."
+: (exec-t) 1 2 + . ; : exec-t 3 4 + . ['] (exec-t) execute 5 6 + . ; see (exec-t) see exec-t cr exec-t
+
+T" CATCH called from threaded code."
+: catch-t 3 4 + . ['] (exec-t) catch cr .s drop 5 6 + . ; see (exec-t) see catch-t cr catch-t
+
+T" Test endless recurse, and see if the system stops when the return stack is full."
+ : (rt1) 1 + dup . recurse ; : rt1 0 (rt1) ; see rt1 cr rt1
+
+T" Endless recurse test with catch.
+variable rtv : rt2 rtv @ ( .s ) catch . ; ' rt2 rtv ! see rt2 cr rt2
+
+T" CREATE DOES>"
+: create-const create , does> ? ; 5 create-const five see create-const cr see five cr five cr
+

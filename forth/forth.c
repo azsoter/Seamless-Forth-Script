@@ -188,7 +188,6 @@ void forth_execute(forth_runtime_context_t *ctx)
 	forth_EXECUTE(ctx, xt);
 }
 
-#if 1
 // Interpreter for threaded code.
 void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -206,37 +205,6 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 
 	ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
 }
-#else
-// This version seems to be incompatible with CATCH.
-// I leave it here in case I have some bright idea how to fix that.
-// Interpreter for threaded code.
-void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
-{
-	forth_xt_t x;
-
-	forth_RPUSH(ctx, (forth_cell_t)(ctx->ip));
-	ctx->ip = &(xt->meaning);
-
-	while (0 != ctx->ip)
-	{
-		while (0 != *(ctx->ip))
-		{
-			x = (forth_xt_t)*(ctx->ip++);
-
-			if (FORTH_XT_FLAGS_ACTION_THREADED == (x->flags & FORTH_XT_FLAGS_ACTION_MASK))
-			{
-				forth_RPUSH(ctx, (forth_cell_t)(ctx->ip));
-				ctx->ip = &(x->meaning);
-			}
-			else
-			{
-				forth_EXECUTE(ctx, x);
-			}
-		}
-		ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
-	}
-}
-#endif
 
 #if !defined(FORTH_WITHOUT_COMPILATION)
 // EXIT ( -- )
@@ -365,6 +333,7 @@ void forth_catch(forth_runtime_context_t *ctx)
 
     if (0 == res)
     {
+//		ctx->ip = 0;
         ctx->throw_handler = (forth_ucell_t)(&catch_frame);
         forth_execute(ctx);
         forth_PUSH(ctx, 0);
@@ -372,8 +341,8 @@ void forth_catch(forth_runtime_context_t *ctx)
     else
     {
 		ctx->rp = saved_rp;
-		ctx->ip = (forth_cell_t *)ctx->rp[2];
         ctx->sp = (forth_cell_t *)ctx->rp[1];
+		ctx->ip = (forth_cell_t *)ctx->rp[2];
         *(ctx->sp) = res;
     }
 
@@ -3594,6 +3563,19 @@ forth_vocabulary_entry_t *forth_CREATE_DICTIONARY_ENTRY(forth_runtime_context_t 
 	if (0 == ctx->dictionary)
 	{
 		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	forth_2dup(ctx);
+	forth_find_name(ctx);
+
+	if (0 != forth_POP(ctx))
+	{
+		forth_cr(ctx);
+		forth_TYPE0(ctx, "WARNING: Word ");
+		forth_2dup(ctx);
+		forth_type(ctx);
+		forth_TYPE0(ctx, " is being redefined!");
+		forth_cr(ctx);
 	}
 
 	name_length = forth_POP(ctx);
