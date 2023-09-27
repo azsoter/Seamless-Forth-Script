@@ -4473,11 +4473,31 @@ forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int 
         return 0;
     }
 
-    if (0 == cmd)
+    if ((0 == ctx) || (0 == cmd))
     {
         return -9; // Invalid memory address, is there anything better here?
     }
 
+	if ((0 == ctx->write_string) || (0 == ctx->send_cr))
+	{
+		// These are mandatory and we cannot run without them since they are needed for all printing (including error messages).
+		// If the application code does not want to print at all, and it wants to discard all output (which would be highly unusual)
+		// at least some dummy version of these should be supplied.
+		// These are NOT checked at run time (since they are assumed to be present), so we check for them here.
+		return -21; // Unsupported opration.
+	}
+
+	if (0 == ctx->terminal_width)
+	{
+		ctx->terminal_width = 80; // Some reasonable default.
+		ctx->terminal_col = 0;
+	}
+
+	if (0 == ctx->terminal_height)
+	{
+		ctx->terminal_height = 25; // Some reasonable default.
+	}
+	
     ctx->bye_handler = 0;
     ctx->quit_handler = 0;
     ctx->throw_handler = 0;

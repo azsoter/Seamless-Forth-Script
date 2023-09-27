@@ -91,58 +91,58 @@ struct forth_dictionary
 struct forth_runtime_context
 {
 	forth_dictionary_t *dictionary;
-	forth_cell_t	*sp_max;
-	forth_cell_t	*sp_min;
-	forth_cell_t	*sp0;
-	forth_cell_t	*sp;
-	forth_cell_t	*rp_max;
-	forth_cell_t	*rp_min;
-	forth_cell_t	*rp0;
-	forth_cell_t	*rp;
-	forth_cell_t	*ip;
-	forth_cell_t	base;	// Numeric base.
-	forth_cell_t	state;
-	forth_cell_t	throw_handler;
-	forth_cell_t	bye_handler;
-	forth_cell_t	quit_handler;
-	forth_cell_t	user_break;			// The user has pressed CTRL-C.....
-	forth_cell_t	abort_msg_len;		// Used by ABORT"
-	forth_cell_t	abort_msg_addr;		// Used by ABORT"
-	forth_cell_t	symbol_addr;
-	forth_cell_t	symbol_length;
-	forth_cell_t	blk;		// BLK
-	forth_cell_t	source_id;
-	const char		*source_address;
-	forth_cell_t	source_length;
-	forth_cell_t	to_in;
+	forth_cell_t	*sp_max;				// The maximum value of the data stack pointer.
+	forth_cell_t	*sp_min;				// Th eminimum value of the data stack pointer.
+	forth_cell_t	*sp0;					// The default value of the data stack pointer (should be sp_max).
+	forth_cell_t	*sp;					// The current value of the data stack pointer.
+	forth_cell_t	*rp_max;				// The maximum value of the return stack pointer.
+	forth_cell_t	*rp_min;				// Th eminimum value of the return stack pointer.
+	forth_cell_t	*rp0;					// The default value of the return stack pointer (should be rp_max).
+	forth_cell_t	*rp;					// The current value of the return stack pointer.
+	forth_cell_t	*ip;					// The Instruction Pointer (IP) of the threaded code interpreter.
+	forth_cell_t	base;					// Numeric base (Forth: BASE).
+	forth_cell_t	state;					// Compilation state (Forth: STATE).
+	forth_cell_t	throw_handler;			// Handler for CATCH and THROW.
+	forth_cell_t	bye_handler;			// Handler for Bye (because of the mixed threaded and native code).
+	forth_cell_t	quit_handler;			// Handler for QUIT (also because of the mixed threaded and native code.)
+	forth_cell_t	user_break;				// The user has pressed CTRL-C.....
+	forth_cell_t	abort_msg_len;			// Used by ABORT"
+	forth_cell_t	abort_msg_addr;			// Used by ABORT"
+	forth_cell_t	symbol_addr;			// Used by error reporting.
+	forth_cell_t	symbol_length;			// Used by error reporting.
+	forth_cell_t	blk;					// Forth: BLK
+	forth_cell_t	source_id;				// Forth: SOURCE-ID
+	const char		*source_address;		// Used by SOURCE.
+	forth_cell_t	source_length;			// Used by SOURCE.
+	forth_cell_t	to_in;					// Forth: >IN
 #if defined(FORTH_INCLUDE_FILE_ACCESS_WORDS)
 	forth_dcell_t	source_file_position;
 	forth_cell_t	line_no;
 	char file_buffer[FORTH_FILE_INPUT_BUFFER_LENGTH];
 #endif
-	forth_cell_t	*wordlists;	// Wordlists in the search order.
-	forth_cell_t	wordlist_slots;	// The number of slots in the search order.
-	forth_cell_t	wordlist_cnt;	// The number of workdlists in the search order.
-	forth_cell_t	current;	// The current wordlist (where definitions are appended).
-	forth_cell_t	defining;	// The word being defined.
-	forth_cell_t	trace;		// Enabled execution trace.
-	forth_cell_t	terminal_width;
-	forth_cell_t	terminal_height;
-	forth_cell_t	terminal_col;
-	int (*page)(struct forth_runtime_context *rctx);							// PAGE -- If the device cannot do it set to to 0.
-	int (*at_xy)(struct forth_runtime_context *rctx, forth_cell_t x, forth_cell_t y);			// AT-XY -- If the device cannot do it set to to 0.
-	int (*write_string)(struct forth_runtime_context *rctx, const char *str, forth_cell_t length);		// TYPE
-	int (*send_cr)(struct forth_runtime_context *rctx);							// CR
-	forth_scell_t (*accept_string)(struct forth_runtime_context *rctx, char *buffer, forth_cell_t length);	// ACCEPT
-	forth_cell_t (*key)(struct forth_runtime_context *rctx);						// KEY
-	forth_cell_t (*key_q)(struct forth_runtime_context *rctx);						// KEY?
-	forth_cell_t (*ekey)(struct forth_runtime_context *rctx);						// EKEY
-	forth_cell_t (*ekey_q)(struct forth_runtime_context *rctx);						// EKEY?
-	forth_cell_t (*ekey_to_char)(struct forth_runtime_context *rctx, forth_cell_t ekey);			// EKEY>CHAR
-	forth_cell_t	tib_count;
-	char		    tib[FORTH_TIB_SIZE];
-	char 	       *numbuff_ptr;
-	char		    num_buff[FORTH_NUM_BUFF_LENGTH];
+	forth_cell_t	*wordlists;				// Wordlists in the search order.
+	forth_cell_t	wordlist_slots;			// The number of slots in the search order.
+	forth_cell_t	wordlist_cnt;			// The number of workdlists in the search order.
+	forth_cell_t	current;				// The current wordlist (where definitions are appended).
+	forth_cell_t	defining;				// The word being defined.
+	forth_cell_t	trace;					// Flag for Enabling/disabling execution trace.
+	forth_cell_t	terminal_width;			// Terminal width -- i.e. number of columns (mandatory).
+	forth_cell_t	terminal_height;		// Terminal height -- i.e. number of rows (mandatory.)
+	forth_cell_t	terminal_col;			// Current column of the terminal output.
+	int (*page)(struct forth_runtime_context *rctx);			// PAGE -- If the device cannot do it set to to 0.
+	int (*at_xy)(struct forth_runtime_context *rctx, forth_cell_t x, forth_cell_t y);	// AT-XY -- If the device cannot do it set to to 0.
+	int (*write_string)(struct forth_runtime_context *rctx, const char *str, forth_cell_t length);		// The implementation of TYPE (Mandatory!)
+	int (*send_cr)(struct forth_runtime_context *rctx);						// The implementation of CR (Mandatory!)
+	forth_scell_t (*accept_string)(struct forth_runtime_context *rctx, char *buffer, forth_cell_t length);	// The implementation of ACCEPT (Can be set to 0 if the device does not support input.)
+	forth_cell_t (*key)(struct forth_runtime_context *rctx);				// The implementation of KEY  (Can be set to 0 if no input.)
+	forth_cell_t (*key_q)(struct forth_runtime_context *rctx);				// The implementation of KEY? (Can be set to 0 if no input.)
+	forth_cell_t (*ekey)(struct forth_runtime_context *rctx);				// The implementation of EKEY (Can be set to 0)
+	forth_cell_t (*ekey_q)(struct forth_runtime_context *rctx);				// The implementation of EKEY? (Can be set to 0)
+	forth_cell_t (*ekey_to_char)(struct forth_runtime_context *rctx, forth_cell_t ekey); // The implementation of EKEY>CHAR (Can be set to 0.)
+	forth_cell_t	tib_count;							// The number of characters in the terminal input buffer.
+	char		    tib[FORTH_TIB_SIZE];				// The terminal input buffer.
+	char 	       *numbuff_ptr;						// The current position in the number conversion buffer.	
+	char		    num_buff[FORTH_NUM_BUFF_LENGTH];	// The number conversion buffer.
 	//char		    internal_buffer[32];
 #if defined(FORTH_APPLICATION_DEFINED_CONTEXT_FIELDS)
 	FORTH_APPLICATION_DEFINED_CONTEXT_FIELDS
