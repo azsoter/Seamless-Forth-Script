@@ -176,10 +176,9 @@ void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt)
 			break;
 
 		default:
-			forth_THROW(ctx, -21);
+			forth_THROW(ctx, -21); // unsupported operation
 			break;
 	}
-
 }
 
 // EXECUTE ( xt -- )
@@ -189,6 +188,27 @@ void forth_execute(forth_runtime_context_t *ctx)
 	forth_EXECUTE(ctx, xt);
 }
 
+#if 1
+// Interpreter for threaded code.
+void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_xt_t x;
+
+	forth_RPUSH(ctx, (forth_cell_t)ctx->ip);
+
+	ctx->ip = &(xt->meaning);
+
+	while (0 != *(ctx->ip))
+	{
+		x = (forth_xt_t)*(ctx->ip++);
+		forth_EXECUTE(ctx, x);
+	}
+
+	ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
+}
+#else
+// This version seems to be incompatible with CATCH.
+// I leave it here in case I have some bright idea how to fix that.
 // Interpreter for threaded code.
 void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -216,6 +236,7 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 		ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
 	}
 }
+#endif
 
 #if !defined(FORTH_WITHOUT_COMPILATION)
 // EXIT ( -- )
@@ -285,6 +306,7 @@ void forth_throw(forth_runtime_context_t *ctx)
     forth_THROW(ctx, code);
 }
 
+#if 0
 // CATCH ( xt -- code|0 )
 void forth_catch(forth_runtime_context_t *ctx)
 {
@@ -313,6 +335,52 @@ void forth_catch(forth_runtime_context_t *ctx)
 
     ctx->throw_handler = saved_handler;
 }
+#else
+// This version of CATCH relies more heavily on Forth's return stack, which is bounds checked.
+// The previous version stores everything on C's stack, but on a resource-limited system that can also
+// overflow and even crash something for real.
+// By moving stuff to Forth's return stack we are more likely to hit a limit there (unless things are badly misconfigured)
+// and just get an exception inside the Forth system instead of a segmentation fault.
+//
+// CATCH ( xt -- code|0 )
+void forth_catch(forth_runtime_context_t *ctx)
+{
+    int res;
+    forth_ucell_t *saved_rp;
+    jmp_buf catch_frame;
+
+    if ((ctx->rp - 3) < ctx->rp_min)
+    {
+		ctx->sp[0] = -53; 	// exception stack overflow
+		return;
+    }
+
+	ctx->rp -= 3;
+	saved_rp = ctx->rp;
+	ctx->rp[0] = ctx->throw_handler;
+	ctx->rp[1] = (forth_cell_t)ctx->sp;
+	ctx->rp[2] = (forth_cell_t)ctx->ip;
+
+    res = setjmp(catch_frame);
+
+    if (0 == res)
+    {
+        ctx->throw_handler = (forth_ucell_t)(&catch_frame);
+        forth_execute(ctx);
+        forth_PUSH(ctx, 0);
+    }
+    else
+    {
+		ctx->rp = saved_rp;
+		ctx->ip = (forth_cell_t *)ctx->rp[2];
+        ctx->sp = (forth_cell_t *)ctx->rp[1];
+        *(ctx->sp) = res;
+    }
+
+    ctx->throw_handler = ctx->rp[0];
+	ctx->rp += 3;
+}
+#endif
 
 // This function is an interface to make it easier to call catch from C.
 // It takes the execution token as a parameter and returns the code from catch.
