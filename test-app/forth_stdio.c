@@ -143,7 +143,7 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 #if !defined(FORTH_WITHOUT_COMPILATION)
 	if (0 == dict)
 	{
-		dict = forth_InitDictionary(dictionary, sizeof(dictionary));
+		dict = Forth_InitDictionary(dictionary, sizeof(dictionary));
 	}
 
 	init_data.dictionary = dict;
@@ -151,7 +151,7 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
 	init_data.search_order_slots = (SEARCH_ORDER_SIZE);
 #endif
 
-	res = forth_InitContext(rctx, &init_data);
+	res = Forth_InitContext(rctx, &init_data);
 
 	if (0 > res)
 	{

@@ -46,11 +46,10 @@ struct forth_context_init_data
 };
 typedef struct forth_context_init_data forth_context_init_data_t;
 
-extern forth_cell_t forth_GetContextSize(void);
-
-extern forth_scell_t forth_InitContext(forth_runtime_context_t *ctx, const forth_context_init_data_t *init_data);
-extern forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length);
-
+extern forth_cell_t Forth_GetContextSize(void);
+extern forth_scell_t Forth_InitContext(forth_runtime_context_t *ctx, const forth_context_init_data_t *init_data);
+extern forth_dictionary_t *Forth_InitDictionary(void *addr, forth_cell_t length);
+extern forth_scell_t Forth_Try(forth_runtime_context_t *ctx, forth_behavior_t f, char *name);
 extern forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack);
 
 #endif

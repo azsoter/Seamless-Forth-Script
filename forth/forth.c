@@ -46,8 +46,7 @@ void forth_THROW(forth_runtime_context_t *ctx, forth_scell_t code)
         {
             forth_quit(ctx);
         }
-    
-        // **TODO** still need to handle ABORT" (code = -2).
+
         longjmp(*handler, (int)code);
     }
 }
@@ -2814,7 +2813,7 @@ void forth_right_bracket(forth_runtime_context_t *ctx)
 // ---------------------------------------------------------------------------------------------------------------
 #if !defined(FORTH_WITHOUT_COMPILATION)
 // Initalize a memory area to be used as a Forth Dictionary.
-forth_dictionary_t *forth_InitDictionary(void *addr, forth_cell_t length)
+forth_dictionary_t *Forth_InitDictionary(void *addr, forth_cell_t length)
 {
 	forth_dictionary_t *dict;
 
@@ -4414,12 +4413,15 @@ const forth_xt_t forth_pABORTq_xt			= (const forth_xt_t)&(forth_wl_system[16]);
 const forth_xt_t forth_DO_VOC_xt			= (const forth_xt_t)&(forth_wl_system[17]);
 #endif
 // -----------------------------------------------------------------------------------------------
-forth_cell_t forth_GetContextSize(void)
+// Get the size of the Forth runtime context structure.
+// It is useful in code that does not include forth_internal.h but needs to e.g. allocate space for such a structure.
+forth_cell_t Forth_GetContextSize(void)
 {
 	return (forth_cell_t)sizeof(forth_runtime_context_t);
 }
 
-forth_scell_t forth_InitContext(forth_runtime_context_t *ctx, const forth_context_init_data_t *init_data)
+// Initialize the Forth runtime context structure.
+forth_scell_t Forth_InitContext(forth_runtime_context_t *ctx, const forth_context_init_data_t *init_data)
 {
 	int res;
 
@@ -4458,6 +4460,40 @@ forth_scell_t forth_InitContext(forth_runtime_context_t *ctx, const forth_contex
 	return 0;
 }
 
+// Run the function which has the signature void f(forth_runtime_context_ctx *ctx) through Forth's CATCH.
+// Return the code from CATCH (i.e. zero on success and a small negative integer on failure).
+// It is useful to run C functions that call things int he Forth system that may throw an exeception.
+// The optinonal NAME is the name to be printed on an execution trace (null is acceptable).
+forth_scell_t Forth_Try(forth_runtime_context_t *ctx, forth_behavior_t f, char *name)
+{
+	forth_vocabulary_entry_t xt;
+
+	if ((0 == ctx) || (0 == f))
+	{
+	    return -9; // Invalid memory address, is there anything better here?	
+	}
+
+	if ((0 == ctx->sp) || (0 == ctx->sp0) || (0 == ctx->sp_max) || (0 == ctx->sp_min) ||
+	    (0 == ctx->rp) || (0 == ctx->rp0) || (0 == ctx->rp_max) || (0 == ctx->rp_min))
+	{
+		// Most likely CTX wasn't even initialized.
+		return -9; // Invalid memory address, is there anything better here?
+	}
+
+//  Allow these to be uninitialized for now, perhaps it makes sense in some situations when the called code does not print anything.
+//	if ((0 == ctx->write_string) || (0 == ctx->send_cr))
+//	{
+//		return -21; // Unsupported opration.
+//	}
+
+	xt.name		= (forth_cell_t)((0 != name) ? name : "Some-C-function");
+	xt.flags 	= FORTH_XT_FLAGS_ACTION_PRIMITIVE;
+	xt.meaning = (forth_cell_t)f;
+	xt.link = 0;
+
+	return forth_CATCH(ctx, &xt);
+}
+
 // Interpret the text in CMD.
 // The command is passed as address and length (so we can interpret substrings inside some bigger buffer).
 // A flag is passed to indicate if the data stack in the context needs to be emtied before running the command.
@@ -4477,6 +4513,12 @@ forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int 
     {
         return -9; // Invalid memory address, is there anything better here?
     }
+
+	if ((0 == ctx->sp) || (0 == ctx->sp0) || (0 == ctx->sp_max) || (0 == ctx->sp_min) ||
+	    (0 == ctx->rp) || (0 == ctx->rp0) || (0 == ctx->rp_max) || (0 == ctx->rp_min))
+	{
+		return -9; // Invalid memory address, is there anything better here?
+	}
 
 	if ((0 == ctx->write_string) || (0 == ctx->send_cr))
 	{
