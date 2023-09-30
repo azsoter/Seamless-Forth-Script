@@ -2513,6 +2513,9 @@ void forth_backslash(forth_runtime_context_t *ctx)
 	ctx->to_in = ctx->source_length;
 }
 // ---------------------------------------------------------------------------------------------------------------
+// Exception codes are from here:
+// http://lars.nocrew.org/forth2012/exception.html
+//
 void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 {
     
@@ -2658,6 +2661,40 @@ forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
 		ctx->defining = 0;
 	}
     return res;
+}
+
+// SAVE-INPUT ( -- blk >in 2 )
+void forth_save_input(forth_runtime_context_t *ctx)
+{
+	forth_PUSH(ctx, ctx->blk);
+	forth_PUSH(ctx, ctx->to_in);
+	forth_PUSH(ctx, 2);
+}
+
+// RESTORE-INPUT ( blk >in 2 -- flag )
+void forth_restore_input(forth_runtime_context_t *ctx)
+{
+	forth_cell_t cnt = forth_POP(ctx);
+	forth_cell_t to_in;
+	forth_cell_t blk;
+
+	if (2 == cnt)
+	{
+		// POP first, in case there is a stack underflow, we don't want to do a half restore.
+		to_in = forth_POP(ctx);
+		blk = forth_POP(ctx);
+		ctx->to_in = to_in;
+		ctx->blk = blk;
+		forth_PUSH(ctx, FORTH_FALSE);
+	}
+	else
+	{
+		for(; 0 != cnt; cnt--)
+		{
+			(void)forth_POP(ctx);
+		}
+		forth_PUSH(ctx, FORTH_TRUE);	// TRUE indicates failure here.....
+	}
 }
 
 // EVALUATE ( i * x c-addr u -- j * x )
@@ -4237,6 +4274,8 @@ DEF_FORTH_WORD("accept",     0, forth_accept,        "( c-addr len1 -- len2 )"),
 DEF_FORTH_WORD("refill",     0, forth_refill,        "( -- flag )"),
 
 DEF_FORTH_WORD(">in",      	 0, forth_to_in,      	 "( -- addr )"),
+DEF_FORTH_WORD("save-input", 0, forth_save_input,    "( -- blk >in 2 )"),
+DEF_FORTH_WORD("restore-input", 0, forth_restore_input, "( blk >in 2 -- flag )"),
 DEF_FORTH_WORD("source",     0, forth_source,      	 "( -- c-addr length )"),
 DEF_FORTH_WORD("source-id",  0, forth_source_id,     "( -- id )"),
 DEF_FORTH_WORD("parse",      0, forth_parse,         "( char -- c-addr len )"),
