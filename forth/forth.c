@@ -4049,7 +4049,10 @@ void forth_bracket_undefined(forth_runtime_context_t *ctx)
 void forth_tick(forth_runtime_context_t *ctx)
 {
     forth_parse_name(ctx);
+	ctx->symbol_addr = ctx->sp[1];
+	ctx->symbol_length = ctx->sp[0];
     forth_find_name(ctx);
+
     if (0 == ctx->sp[0])
     {
         forth_THROW(ctx, -13);
@@ -4060,14 +4063,7 @@ void forth_tick(forth_runtime_context_t *ctx)
 // ['] Compile: ( "name" -- ) Execute: ( -- xt )
 void forth_bracket_tick(forth_runtime_context_t *ctx)
 {
-    forth_parse_name(ctx);
-    forth_find_name(ctx);
-
-    if (0 == ctx->sp[0])
-    {
-        forth_THROW(ctx, -13);
-    }
-
+	forth_tick(ctx);
 	forth_xliteral(ctx);
 }
 #endif
