@@ -130,8 +130,13 @@ forth_cell_t key_q(struct forth_runtime_context *rctx)
 
 forth_cell_t ekey(struct forth_runtime_context *rctx)
 {
+#if 0
 	char c = getch();
 	return ((forth_cell_t)c) << 8;
+#else
+	forth_cell_t c = getch();
+	return c;
+#endif
 }
 
 forth_cell_t ekey_q(struct forth_runtime_context *rctx)
@@ -148,8 +153,11 @@ forth_cell_t ekey_q(struct forth_runtime_context *rctx)
 
 forth_cell_t ekey_to_char(struct forth_runtime_context *rctx, forth_cell_t ek)
 {
+#if 0
 	char c =  ek >> 8;
-
+#else
+	char c =  (char)ek;
+#endif
 	if (127 == c || 8 == c || 7 == c) 	// Ugly, but I have no idea what the proper symbolic names are.
 	{
 		c = '\b';
