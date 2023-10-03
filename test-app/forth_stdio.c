@@ -108,6 +108,10 @@ static forth_cell_t ekey_to_char(struct forth_runtime_context *rctx, forth_cell_
 
 forth_dictionary_t *dict = 0;
 
+#if defined(FORTH_INCLUDE_BLOCKS)
+forth_block_buffers_t block_buffers;
+#endif
+
 #define SEARCH_ORDER_SIZE 32 /* Perhaps move this to some header file at one point. */
 // ------------------------------------------------------------------------------------------------
 int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, const char *cmd)
@@ -172,6 +176,12 @@ int forth_run_forth_stdio(unsigned int dstack_cells, unsigned int rstack_cells, 
    	rctx->ekey = &ekey;
    	rctx->ekey_q = &ekey_q;
    	rctx->ekey_to_char = &ekey_to_char;
+
+#if defined(FORTH_INCLUDE_BLOCKS)
+	memset(&block_buffers, 0, sizeof(block_buffers));
+	block_buffers.current_buffer_index = -1;
+	rctx->block_buffers = &block_buffers;
+#endif
 
     res = Forth(rctx, cmd, strlen(cmd), 1);
 

@@ -33,6 +33,9 @@
 // The master list of all arrays that contain (compiled in) entires of Forth words (usually implemented in C).
 const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
     forth_wl_forth,
+#if defined(FORTH_INCLUDE_BLOCKS)
+    forth_wl_blocks,
+#endif
     forth_wl_system,
     0
 };

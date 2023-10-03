@@ -3,9 +3,9 @@ CC=gcc
 CFLAGS+= -O3 -Itest-app -Iforth -MMD
 # LDFLAGS=-pthread
 
-OBJ = main.o forth.o forth_search.o forth_configurable.o forth_stdio.o
-OBJ_CURSES = main_test_curses.o forth.o forth_search.o forth_configurable.o
-default: test
+OBJ = main.o forth_blk_io.o forth.o forth_search.o forth_configurable.o forth_stdio.o forth_blocks.o
+OBJ_CURSES = main_test_curses.o forth_blk_io.o forth.o forth_search.o forth_configurable.o forth_blocks.o
+default: test blk
 
 -include $(OBJ:%.o=%.d)
 
@@ -14,6 +14,9 @@ default: test
 
 %.o: test-app/%.c
 	$(CC) $(CFLAGS) $< -c -o $@
+
+blk:
+	mkdir -p blk
 
 test: $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o test $(LDFLAGS)

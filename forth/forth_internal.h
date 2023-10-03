@@ -87,10 +87,34 @@ struct forth_dictionary
 	uint8_t 		 items[1];		// Place holder for the rest of the dictionary.
 };
 
+#if defined(FORTH_INCLUDE_BLOCKS)
+
+extern forth_scell_t forth_READ_BLOCK(forth_cell_t block_number, uint8_t *buffer);
+extern forth_scell_t forth_WRITE_BLOCK(forth_cell_t block_number, uint8_t *buffer);
+
+#define FORTH_BLOCK_BUFFER_SIZE 1024 /* This really MUST be 1024 on a proper Forth system. */
+struct forth_block_buffers
+{
+    forth_scell_t block_assigned[FORTH_BLOCK_BUFFERS_COUNT];                // Block assigned to each buffer.
+    forth_cell_t last_used[FORTH_BLOCK_BUFFERS_COUNT];                      // In oder to implement a 'least recently used' scheme.
+    forth_cell_t age_clock;                                                 // Counter for last_use;
+	forth_scell_t current_buffer_index;										// Current buffer index.
+	forth_cell_t scr;														// SCR
+    int8_t buffer_state[FORTH_BLOCK_BUFFERS_COUNT];                         // 0: Empty, 1 content loaded, -1 dirty.
+    uint8_t buffer[FORTH_BLOCK_BUFFERS_COUNT][FORTH_BLOCK_BUFFER_SIZE];     // The bufffers.
+};
+typedef struct forth_block_buffers forth_block_buffers_t;
+
+extern const forth_vocabulary_entry_t forth_wl_blocks[];
+#endif
+
 // The runtime context passed to each and every function implementing a forth word.
 struct forth_runtime_context
 {
 	forth_dictionary_t *dictionary;
+#if defined(FORTH_INCLUDE_BLOCKS)
+	forth_block_buffers_t	*block_buffers;
+#endif
 	forth_cell_t	*sp_max;				// The maximum value of the data stack pointer.
 	forth_cell_t	*sp_min;				// Th eminimum value of the data stack pointer.
 	forth_cell_t	*sp0;					// The default value of the data stack pointer (should be sp_max).
@@ -198,9 +222,10 @@ extern void forth_do_voc(forth_runtime_context_t *ctx);
 #endif
 extern void forth_forth(forth_runtime_context_t *ctx);
 
-extern int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value);
-extern int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value);
-extern int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value);
+extern int forth_HDOT(forth_runtime_context_t *ctx, forth_cell_t value);
+extern int forth_UDOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value);
+extern int forth_DOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value);
+extern int forth_DOT_R(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value, forth_cell_t width, forth_cell_t is_signed);
 
 extern void forth_PRINT_TRACE(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt);

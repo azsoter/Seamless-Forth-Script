@@ -1682,7 +1682,7 @@ static char *forth_FORMAT_UNSIGNED(forth_cell_t value, forth_cell_t base, forth_
 	return p; 
 }
 
-int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value)
+int forth_HDOT(forth_runtime_context_t *ctx, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
 	char *end = buffer + (FORTH_CELL_HEX_DIGITS) + 1;
@@ -1692,7 +1692,7 @@ int forth_HDOT(struct forth_runtime_context *ctx, forth_cell_t value)
 	return ctx->write_string(ctx, p, (end - p) + 1);
 }
 
-int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
+int forth_UDOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
 	char *end = buffer + sizeof(ctx->num_buff);
@@ -1702,7 +1702,7 @@ int forth_UDOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_
 	return ctx->write_string(ctx, p, (end - p) + 1);
 }
 
-int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value)
+int forth_DOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
 	char *end = buffer + sizeof(ctx->num_buff);
@@ -1721,7 +1721,7 @@ int forth_DOT(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t
 	return ctx->write_string(ctx, p, (end - p) + 1);
 }
 
-static int forth_DOT_R(struct forth_runtime_context *ctx, forth_cell_t base, forth_cell_t value, forth_cell_t width, forth_cell_t is_signed)
+int forth_DOT_R(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value, forth_cell_t width, forth_cell_t is_signed)
 {
 	char *buffer = ctx->num_buff;
 	char *end = buffer + sizeof(ctx->num_buff);
@@ -2510,6 +2510,15 @@ void forth_dot_paren(forth_runtime_context_t *ctx)
 // \ ( -- )
 void forth_backslash(forth_runtime_context_t *ctx)
 {
+#if defined(FORTH_INCLUDE_BLOCKS)
+	forth_cell_t in;
+	if (0 != ctx->blk)
+	{
+		in = (ctx->to_in & ~(forth_cell_t)63) + 64;
+		ctx->to_in = (in < ctx->source_length) ? in : ctx->source_length;
+		return;
+	}
+#endif
 	ctx->to_in = ctx->source_length;
 }
 // ---------------------------------------------------------------------------------------------------------------
