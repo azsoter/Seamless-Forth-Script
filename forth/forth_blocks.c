@@ -39,6 +39,7 @@
 #include <forth.h>
 #include <forth_internal.h>
 
+#if defined(FORTH_INCLUDE_BLOCKS)
 // BUFFER ( blk -- c-addr )
 void forth_buffer(forth_runtime_context_t *ctx)
 {
@@ -309,3 +310,4 @@ DEF_FORTH_WORD( "scr",       0, forth_scr,              "( -- addr )"),
 DEF_FORTH_WORD( "blk",       0, forth_blk,              "( -- addr )"),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
+#endif

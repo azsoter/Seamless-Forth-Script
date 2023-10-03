@@ -30,6 +30,7 @@
 #include <forth.h>
 #include <forth_internal.h>
 
+#if defined(FORTH_INCLUDE_BLOCKS)
 // If fopen() fails this functions returns 1 indicating the the file (probably) does not exist.
 forth_scell_t forth_READ_BLOCK(forth_cell_t block_number, uint8_t *buffer)
 {
@@ -83,3 +84,4 @@ forth_scell_t forth_WRITE_BLOCK(forth_cell_t block_number, uint8_t *buffer)
 
     return res;
 }
+#endif
