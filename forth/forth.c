@@ -1610,6 +1610,23 @@ void forth_spaces(forth_runtime_context_t *ctx)
 void forth_refill(forth_runtime_context_t *ctx)
 {
     forth_scell_t res;
+#if defined(FORTH_INCLUDE_BLOCKS)
+	if (0 != ctx->blk)
+	{
+		if ((ctx->blk + 1) >= (FORTH_MAX_BLOCKS)) // We are at the last block, cannot refill.
+		{
+			forth_PUSH(ctx, FORTH_FALSE);
+		}
+		else
+		{
+			forth_ADJUST_BLK_INPUT_SOURCE(ctx, ctx->blk + 1);
+			ctx->blk += 1;
+			ctx->to_in = 0;
+			forth_PUSH(ctx, FORTH_TRUE);
+		}
+		return;
+	}
+#endif
     if (0 == ctx->source_id)
     {
         ctx->blk = 0;
@@ -2694,6 +2711,12 @@ void forth_restore_input(forth_runtime_context_t *ctx)
 		blk = forth_POP(ctx);
 		ctx->to_in = to_in;
 		ctx->blk = blk;
+	#if defined(FORTH_INCLUDE_BLOCKS)
+		if (0 != blk)
+		{
+			forth_ADJUST_BLK_INPUT_SOURCE(ctx, blk);
+		}
+	#endif
 		forth_PUSH(ctx, FORTH_FALSE);
 	}
 	else
@@ -2742,6 +2765,12 @@ void forth_evaluate(forth_runtime_context_t *ctx)
 	ctx->to_in = saved_in;
 	ctx->source_address = saved_source_address;
 	ctx->source_length = saved_source_length;
+#if defined(FORTH_INCLUDE_BLOCKS)
+    if (0 != saved_blk)
+    {
+        forth_ADJUST_BLK_INPUT_SOURCE(ctx, saved_blk);
+    }
+#endif
 	forth_THROW(ctx, res);
 }
 

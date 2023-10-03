@@ -26,6 +26,15 @@
 *
 */
 
+// This file provides an implementation of the BLOCK word set.
+// Many forth programmers cosider blocks to be obsolete, but on a small
+// embedded system there may not be any file system.
+// BLOCKS provide a means to access permanent storage and store source code or other that needs to be saved
+// and retrieved later.
+// Blocks are exacvtly 1KB (1024 bytes) in size.
+// Here is the code for everything except to the actual physical read/write which needs to be provided by the
+// system hosting the Forth subsystem.
+
 #include <string.h>
 #include <forth.h>
 #include <forth_internal.h>
@@ -70,7 +79,7 @@ void forth_buffer(forth_runtime_context_t *ctx)
 
     if (-1 == block_buffers->buffer_state[ix]) // Buffer is dirty
     {
-        res = forth_WRITE_BLOCK(blk, block_buffers->buffer[ix]);
+        res = forth_WRITE_BLOCK(block_buffers->block_assigned[ix], block_buffers->buffer[ix]);
 
         if (0 != res)
         {
@@ -226,6 +235,8 @@ void forth_scr(forth_runtime_context_t *ctx)
     forth_PUSH(ctx, (forth_cell_t)&(ctx->block_buffers->scr));
 }
 
+// If BLK has just been restored there is no expectation that the old buffer's address is still valid.
+// So we need to readjust SOURCE's address (and length while we are at it, although it should be valid).
 void forth_ADJUST_BLK_INPUT_SOURCE(forth_runtime_context_t *ctx, forth_cell_t blk)
 {
     if (0 != blk)
@@ -256,21 +267,16 @@ void forth_load(forth_runtime_context_t *ctx)
 
     res = forth_CATCH(ctx, forth_interpret_xt);
 
-    if (0 == saved_blk)
-    {
-	    ctx->source_address = saved_source_address;
-    }
-    else
-    {
-        forth_ADJUST_BLK_INPUT_SOURCE(ctx, saved_blk);
-        //forth_PUSH(ctx, saved_blk);
-        //forth_block(ctx);
-        //ctx->source_address = (const char *)forth_POP(ctx);
-    }
-
-	ctx->source_length = saved_source_length;
+	ctx->source_address = saved_source_address;
+    ctx->source_length = saved_source_length;
     ctx->blk = saved_blk;
 	ctx->to_in = saved_in;
+
+    if (0 != saved_blk)
+    {
+        forth_ADJUST_BLK_INPUT_SOURCE(ctx, saved_blk);
+    }
+
 	forth_THROW(ctx, res);
 }
 

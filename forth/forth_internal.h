@@ -89,8 +89,23 @@ struct forth_dictionary
 
 #if defined(FORTH_INCLUDE_BLOCKS)
 
+// These need to be provided by the target system / environment to physically read a block from and write one to storage.
 extern forth_scell_t forth_READ_BLOCK(forth_cell_t block_number, uint8_t *buffer);
 extern forth_scell_t forth_WRITE_BLOCK(forth_cell_t block_number, uint8_t *buffer);
+
+extern void forth_ADJUST_BLK_INPUT_SOURCE(forth_runtime_context_t *ctx, forth_cell_t blk);
+
+extern void forth_buffer(forth_runtime_context_t *ctx);
+extern void forth_block(forth_runtime_context_t *ctx);
+extern void forth_list(forth_runtime_context_t *ctx);
+extern void forth_update(forth_runtime_context_t *ctx);
+extern void forth_save_buffers(forth_runtime_context_t *ctx);
+extern void forth_empty_buffers(forth_runtime_context_t *ctx);
+extern void forth_flush(forth_runtime_context_t *ctx);
+extern void forth_blk(forth_runtime_context_t *ctx);
+extern void forth_scr(forth_runtime_context_t *ctx);
+extern void forth_load(forth_runtime_context_t *ctx);
+extern void forth_thru(forth_runtime_context_t *ctx);
 
 #define FORTH_BLOCK_BUFFER_SIZE 1024 /* This really MUST be 1024 on a proper Forth system. */
 struct forth_block_buffers
