@@ -29,6 +29,10 @@ forth_runtime_context_t r_ctx;
 
 forth_cell_t search_order[SEARCH_ORDER_SIZE];
 
+#if defined(FORTH_INCLUDE_BLOCKS)
+forth_block_buffers_t block_buffers;
+#endif
+
 int reset_curses(void)
 {
 	cbreak();
@@ -254,6 +258,12 @@ int main()
 
 	init_curses();
 	
+#if defined(FORTH_INCLUDE_BLOCKS)
+	memset(&block_buffers, 0, sizeof(block_buffers));
+	block_buffers.current_buffer_index = -1;
+	r_ctx.block_buffers = &block_buffers;
+#endif
+
 	(void)Forth(&r_ctx, "quit", 4, 1);
 
 	close_curses();
