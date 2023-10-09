@@ -2559,7 +2559,7 @@ void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 // If needed port code here from EFCI, but currently not supported.
 #endif
 
-	forth_TYPE0(ctx, " @ col:");
+	forth_TYPE0(ctx, " @position: ");
 	forth_DOT(ctx, 10, ctx->to_in);
 	forth_TYPE0(ctx, " Error: ");
 	forth_DOT(ctx, 10, code);
@@ -2648,6 +2648,41 @@ void forth_print_error(forth_runtime_context_t *ctx)
     forth_PRINT_ERROR(ctx, forth_POP(ctx));
 }
 
+// .VERSION ( -- )
+void forth_print_version(forth_runtime_context_t *ctx)
+{
+	forth_cell_t major   = 0xFF & ((FORTH_ENGINE_VERSION) >> 24);
+	forth_cell_t minor   = 0xFF & ((FORTH_ENGINE_VERSION) >> 16);
+	forth_cell_t release = 0xFF & ((FORTH_ENGINE_VERSION) >> 8);
+	forth_cell_t build   = 0xFF & (FORTH_ENGINE_VERSION);
+	forth_cell_t base = ctx->base;
+
+	ctx->base = 10;
+	forth_less_hash(ctx);		// <#
+
+	forth_PUSH(ctx, build);
+	forth_PUSH(ctx, 0);
+	forth_hash_s(ctx);			// #S
+	forth_PUSH(ctx, '.');
+	forth_hold(ctx);
+
+	ctx->sp[1] = release;
+	forth_hash_s(ctx);			// #S
+	forth_PUSH(ctx, '.');
+	forth_hold(ctx);
+
+	ctx->sp[1] = minor;
+	forth_hash_s(ctx);			// #S
+	forth_PUSH(ctx, '.');
+	forth_hold(ctx);
+
+	ctx->sp[1] = major;
+	forth_hash_s(ctx);			// #S
+
+	forth_hash_greater(ctx);	// #>
+	forth_type(ctx);
+	ctx->base = base;
+}
 // ---------------------------------------------------------------------------------------------------------------
 // BYE ( -- ) has to leave the Forth system and return to the OS or whoever has called it.
 // Since we do not know how many layers of threaded code or C code is on the call stack, or how many CATCH-es
@@ -4431,7 +4466,8 @@ DEF_FORTH_WORD( "sp!",  	 0, forth_sp_store,      "( sp -- )"),
 DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
 DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
-DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, 1, "( -- v ) The version number of this system."),
+DEF_FORTH_WORD( ".version",  0, forth_print_version, "( -- ) Print the version number of the forth engine."),
+DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_ENGINE_VERSION, "( -- v ) The version number of the forth engine."),
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
 

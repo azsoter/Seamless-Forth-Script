@@ -30,6 +30,8 @@
 
 #include <forth_config.h>
 
+#define FORTH_ENGINE_VERSION 2
+
 typedef struct forth_runtime_context forth_runtime_context_t;
 typedef void (*forth_behavior_t)(forth_runtime_context_t *ctx);
 typedef struct forth_dictionary forth_dictionary_t;

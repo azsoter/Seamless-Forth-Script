@@ -288,6 +288,7 @@ extern void forth_throw(forth_runtime_context_t *ctx);
 extern void forth_abort(forth_runtime_context_t *ctx);
 extern void forth_abort_quote(forth_runtime_context_t *ctx);
 extern void forth_print_error(forth_runtime_context_t *ctx);
+extern void forth_print_version(forth_runtime_context_t *ctx);
 extern void forth_type(forth_runtime_context_t *ctx);
 extern void forth_emit(forth_runtime_context_t *ctx);
 extern void forth_cr(forth_runtime_context_t *ctx);
