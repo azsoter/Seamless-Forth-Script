@@ -30,6 +30,10 @@
 
 #include <forth_config.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define FORTH_ENGINE_VERSION 2
 
 typedef struct forth_runtime_context forth_runtime_context_t;
@@ -53,5 +57,9 @@ extern forth_scell_t Forth_InitContext(forth_runtime_context_t *ctx, const forth
 extern forth_dictionary_t *Forth_InitDictionary(void *addr, forth_cell_t length);
 extern forth_scell_t Forth_Try(forth_runtime_context_t *ctx, forth_behavior_t f, char *name);
 extern forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -28,6 +28,10 @@
 *
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(_LP64) || defined(__LP64__)
 #define FORTH_IS_64BIT 1
 #elif  defined(_LP32) || defined(__LP32__)
@@ -48,6 +52,10 @@
 #if defined(FORTH_INCLUDE_BLOCKS)
 #   define FORTH_BLOCK_BUFFERS_COUNT 3
 #   define FORTH_MAX_BLOCKS 256
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

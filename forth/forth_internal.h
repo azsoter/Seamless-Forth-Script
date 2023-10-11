@@ -33,6 +33,10 @@
 #include <forth.h>
 #include <setjmp.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Well-fromed flags in Forth
 #define FORTH_FALSE ((forth_ucell_t)0)
 #define FORTH_TRUE  (~(forth_ucell_t)0)
@@ -525,5 +529,9 @@ extern void forth_exit(forth_runtime_context_t *ctx);
 
 
 extern void forth_bye(forth_runtime_context_t *ctx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

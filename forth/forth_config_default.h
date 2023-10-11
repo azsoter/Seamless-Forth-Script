@@ -30,6 +30,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(FORTH_IS_64BIT)
 
 typedef int64_t  forth_scell_t;
@@ -75,5 +79,9 @@ typedef forth_ucell_t forth_cell_t;
 #define FORTH_ALIGNED_MASK (~(sizeof(forth_ucell_t) - 1))
 
 #define FORTH_NUM_BUFF_LENGTH (128 + 4)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
