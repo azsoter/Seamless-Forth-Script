@@ -466,7 +466,7 @@ void forth_search_wordlist(struct forth_runtime_context *ctx)
 //
 const forth_vocabulary_entry_t *forth_FIND_NAME(struct forth_runtime_context *ctx, const char *name, forth_cell_t len)
 {
-    const forth_vocabulary_entry_t **wl;
+    // const forth_vocabulary_entry_t **wl;
     const forth_vocabulary_entry_t *ep = 0;
     forth_wordlist_t *wid;
     forth_cell_t i;

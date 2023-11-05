@@ -262,7 +262,7 @@ extern void forth_PUSH(forth_runtime_context_t *ctx, forth_ucell_t x);
 extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
 extern forth_dcell_t forth_DTOS_READ(forth_runtime_context_t *ctx);
 extern forth_dcell_t forth_DPOP(forth_runtime_context_t *ctx);
-extern forth_dcell_t forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud);
+extern void forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud);
 
 #if !defined(FORTH_WITHOUT_COMPILATION)
 extern forth_vocabulary_entry_t *forth_GET_LATEST(forth_runtime_context_t *ctx);

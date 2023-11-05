@@ -101,7 +101,7 @@ forth_dcell_t forth_DPOP(forth_runtime_context_t *ctx)
 }
 
 // Push a double onto the data stack.
-forth_dcell_t forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud)
+void forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud)
 {
 	forth_PUSH(ctx, FORTH_CELL_LOW(ud));
 	forth_PUSH(ctx, FORTH_CELL_HIGH(ud));
@@ -1386,6 +1386,7 @@ void forth_TYPE0(forth_runtime_context_t *ctx, const char *str)
 	}
 
 	res = ctx->write_string(ctx, str, len);
+	(void)res;
     /* Just ignore errors here for now........
 	if (0 > res)
     {
@@ -2110,7 +2111,7 @@ static void forth_SKIP_DELIMITERS(const char **buffer, forth_cell_t *length, cha
 
 	if ((FORTH_CHAR_SPACE) == delimiter)
 	{
-		while ((0 != len) && isspace(*buff))
+		while ((0 != len) && isspace((int)(*buff)))
 		{
 			buff++;
 			len--;
@@ -2141,7 +2142,7 @@ static void forth_PARSE_TILL_DELIMITER(const char **buffer, forth_cell_t *length
 #endif
 	if ((FORTH_CHAR_SPACE) == delimiter)
 	{
-		while ((0 != len) && !isspace(*buff))
+		while ((0 != len) && !isspace((int)(*buff)))
 		{
 			// putchar(*buff);
 			buff++;
