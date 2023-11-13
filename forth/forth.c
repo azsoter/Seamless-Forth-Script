@@ -2637,7 +2637,13 @@ void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 	case -56: forth_TYPE0(ctx, "QUIT"); break;
 	case -57: forth_TYPE0(ctx, "exception in sending or receiving a character"); break;
 	case -58: forth_TYPE0(ctx, "[IF], [ELSE], or [THEN] exception"); break;
-	default: break;
+	default:
+		// If there are locally defined exception codes handle them here.
+		// Handler should be defined in forth_config.h.
+#if defined(FORTH_PRINT_SYSTEM_DEFINED_ERROR)
+		FORTH_PRINT_SYSTEM_DEFINED_ERROR(ctx, code);
+#endif
+		break;
 	}
 
 	ctx->send_cr(ctx);

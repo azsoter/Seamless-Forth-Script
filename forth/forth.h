@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-#define FORTH_ENGINE_VERSION 2
+#define FORTH_ENGINE_VERSION 4
 
 typedef struct forth_runtime_context forth_runtime_context_t;
 typedef void (*forth_behavior_t)(forth_runtime_context_t *ctx);
