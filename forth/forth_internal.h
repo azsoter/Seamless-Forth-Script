@@ -135,11 +135,11 @@ struct forth_runtime_context
 	forth_block_buffers_t	*block_buffers;
 #endif
 	forth_cell_t	*sp_max;				// The maximum value of the data stack pointer.
-	forth_cell_t	*sp_min;				// Th eminimum value of the data stack pointer.
+	forth_cell_t	*sp_min;				// The minimum value of the data stack pointer.
 	forth_cell_t	*sp0;					// The default value of the data stack pointer (should be sp_max).
 	forth_cell_t	*sp;					// The current value of the data stack pointer.
 	forth_cell_t	*rp_max;				// The maximum value of the return stack pointer.
-	forth_cell_t	*rp_min;				// Th eminimum value of the return stack pointer.
+	forth_cell_t	*rp_min;				// The minimum value of the return stack pointer.
 	forth_cell_t	*rp0;					// The default value of the return stack pointer (should be rp_max).
 	forth_cell_t	*rp;					// The current value of the return stack pointer.
 	forth_cell_t	*ip;					// The Instruction Pointer (IP) of the threaded code interpreter.

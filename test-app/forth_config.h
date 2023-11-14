@@ -54,6 +54,13 @@ extern "C" {
 #   define FORTH_MAX_BLOCKS 256
 #endif
 
+// Get a human readable message for for non-standard (system defined) exceptions.
+// #define FORTH_RETRIEVE_SYSTEM_DEFINED_ERROR_MESSAGE(CODE) forth_retrieve_system_defined_error_message(CODE)
+
+#if defined(FORTH_RETRIEVE_SYSTEM_DEFINED_ERROR_MESSAGE)
+extern const char *forth_retrieve_system_defined_error_message(int code);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

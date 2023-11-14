@@ -30,6 +30,20 @@
 #include <forth.h>
 #include <forth_internal.h>
 
+/*
+const char *forth_retrieve_system_defined_error_message(int code)
+{
+	switch(code)
+	{
+//		case <some-error-code>:
+//			return "<some-message>";
+		default:
+			break;
+	}
+	return 0;
+}
+*/
+
 // The master list of all arrays that contain (compiled in) entires of Forth words (usually implemented in C).
 const forth_vocabulary_entry_t *forth_master_list_of_lists[] = {
     forth_wl_forth,

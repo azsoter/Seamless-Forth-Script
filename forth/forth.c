@@ -1306,7 +1306,6 @@ void forth_move(forth_runtime_context_t *ctx)
 
 forth_scell_t forth_COMPARE_STRINGS(const char *s1, forth_cell_t len1, const char *s2, forth_cell_t len2)
 {
-	// forth_scell_t diff;
 
 	while(1)
 	{
@@ -1906,7 +1905,6 @@ int forth_DOTS(forth_runtime_context_t *ctx)
 
 	return ctx->send_cr(ctx);
 }
-
 // -----------------------------------------------------------------
 void forth_PRINT_TRACE(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -2196,15 +2194,11 @@ void forth_parse(forth_runtime_context_t *ctx)
 			ctx->to_in++;
 		}
 
-		//*--(rctx->sp) = (forth_cell_t)address;
-		//*--(rctx->sp) = length;
         forth_PUSH(ctx, (forth_cell_t)address);
         forth_PUSH(ctx, length);
 	}
 	else
 	{
-		//*--(rctx->sp) = 0;
-		//*--(rctx->sp) = 0;
         forth_PUSH(ctx, 0);
         forth_PUSH(ctx, 0);
 	}
@@ -2284,8 +2278,6 @@ void forth_parse_name(forth_runtime_context_t *ctx)
 	}
 	else
 	{
-		//*--(ctx->sp) = 0;
-		//*--(ctx->sp) = 0;
         forth_PUSH(ctx, 0);
         forth_PUSH(ctx, 0);
 	}
@@ -2545,7 +2537,9 @@ void forth_backslash(forth_runtime_context_t *ctx)
 //
 void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 {
-    
+#if defined(FORTH_RETRIEVE_SYSTEM_DEFINED_ERROR_MESSAGE)
+	const char *msg;
+#endif
 	if ((0 == code) || (1 == code))
 	{
 		return;
@@ -2638,10 +2632,16 @@ void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 	case -57: forth_TYPE0(ctx, "exception in sending or receiving a character"); break;
 	case -58: forth_TYPE0(ctx, "[IF], [ELSE], or [THEN] exception"); break;
 	default:
-		// If there are locally defined exception codes handle them here.
-		// Handler should be defined in forth_config.h.
-#if defined(FORTH_PRINT_SYSTEM_DEFINED_ERROR)
-		FORTH_PRINT_SYSTEM_DEFINED_ERROR(ctx, code);
+		// If there are locally defined exception codes get the error message here.
+		// Function prototype should be defined in forth_config.h.
+#if defined(FORTH_RETRIEVE_SYSTEM_DEFINED_ERROR_MESSAGE)
+
+		msg = FORTH_RETRIEVE_SYSTEM_DEFINED_ERROR_MESSAGE(code);
+
+		if (0 != msg)
+		{
+			forth_TYPE0(ctx, msg);
+		}
 #endif
 		break;
 	}
@@ -2842,8 +2842,25 @@ void forth_quit(forth_runtime_context_t *ctx)
     {
         if (0 == ctx->state)
         {
+#if 1
+        	// We really do need to bail out if there is no output to write to.
+        	// Otherwise we are just going to get looping here when someone throws a -57
+        	// because writing is not possible.
+        	// This can actually happen if the output can close (such as on a network connection).
+
+        	if ((0 == ctx->write_string) || (0 > ctx->write_string(ctx, "OK", 2)))
+        	{
+        		break;
+        	}
+
+            if ((0 == ctx->send_cr) || (0 > ctx->send_cr(ctx)))
+            {
+            	break;
+            }
+#else
             forth_TYPE0(ctx, "OK");
             forth_cr(ctx);
+#endif
         }
 
         forth_refill(ctx);
@@ -2929,7 +2946,7 @@ void forth_right_bracket(forth_runtime_context_t *ctx)
 //                                          Live Compiler and Threaded Code Execution
 // ---------------------------------------------------------------------------------------------------------------
 #if !defined(FORTH_WITHOUT_COMPILATION)
-// Initalize a memory area to be used as a Forth Dictionary.
+// Initialize a memory area to be used as a Forth Dictionary.
 forth_dictionary_t *Forth_InitDictionary(void *addr, forth_cell_t length)
 {
 	forth_dictionary_t *dict;
@@ -3550,7 +3567,7 @@ void forth_bracket_if(forth_runtime_context_t *ctx)
 }
 
 #if !defined(FORTH_WITHOUT_COMPILATION)
-// From a juggested 'reference' implementation.
+// From a suggested 'reference' implementation.
 // CASE ( -- ) C: ( -- case-sys )
 void forth_case(forth_runtime_context_t *ctx)
 {
@@ -3621,26 +3638,6 @@ void forth_BRANCH_TO_DEST(forth_runtime_context_t *ctx, forth_xt_t branch)
 	here = (forth_cell_t *)forth_POP(ctx);
 	forth_COMMA(ctx, (forth_cell_t)(dest - here));
 }
-
-/*
-// AGAIN ( -- ) C: ( dest -- )
-void forth_again(forth_runtime_context_t *ctx)
-{
-	forth_cell_t *dest;
-	forth_cell_t *here;
-
-	if (FORTH_DEST_MARKER != forth_POP(ctx))
-	{
-		forth_THROW(ctx, -22); // Control structure mismatch.
-	}
-
-	forth_COMPILE_COMMA(ctx, forth_BRANCH_xt);
-	dest = (forth_cell_t *)forth_POP(ctx);
-	forth_here(ctx);
-	here = (forth_cell_t *)forth_POP(ctx);
-	forth_COMMA(ctx, (forth_cell_t)(dest - here));
-}
-*/
 
 // AGAIN ( -- ) C: ( dest -- )
 void forth_again(forth_runtime_context_t *ctx)
@@ -4612,9 +4609,10 @@ forth_scell_t Forth_Try(forth_runtime_context_t *ctx, forth_behavior_t f, char *
 
 // Interpret the text in CMD.
 // The command is passed as address and length (so we can interpret substrings inside some bigger buffer).
-// A flag is passed to indicate if the data stack in the context needs to be emtied before running the command.
+// A flag is passed to indicate if the data stack in the context needs to be emptied before running the command.
 //
-// This function returns 0 on success and a non-zero value (which is a code from CATCH/THROW) if an error has occured.
+// This function returns 0 on success and a non-zero value (which is a code from CATCH/THROW) if an error has occurred.
+//
 forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int cmd_length, int clear_stack)
 {
     forth_cell_t res;
@@ -4642,7 +4640,7 @@ forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int 
 		// If the application code does not want to print at all, and it wants to discard all output (which would be highly unusual)
 		// at least some dummy version of these should be supplied.
 		// These are NOT checked at run time (since they are assumed to be present), so we check for them here.
-		return -21; // Unsupported opration.
+		return -21; // Unsupported operation.
 	}
 
 	if (0 == ctx->terminal_width)

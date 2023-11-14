@@ -28,13 +28,16 @@
 *
 */
 
-#include <forth_config.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define FORTH_ENGINE_VERSION 4
+#include <forth_config.h>
+
+#define FORTH_ENGINE_VERSION 5
+
+// Some of the structs are defined in forth_internals.h because their structure is not part of the interface
+// and only the Forth implementation (but not code calling it) needs to know about the details.
 
 typedef struct forth_runtime_context forth_runtime_context_t;
 typedef void (*forth_behavior_t)(forth_runtime_context_t *ctx);
