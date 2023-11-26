@@ -153,14 +153,18 @@ struct forth_runtime_context
 	forth_cell_t	abort_msg_addr;			// Used by ABORT"
 	forth_cell_t	symbol_addr;			// Used by error reporting.
 	forth_cell_t	symbol_length;			// Used by error reporting.
+	forth_cell_t	symbol_blk;				// Used by error reporting.
+	forth_cell_t	symbol_position;		// Used by error reporting.
+	forth_cell_t	symbol_line;			// Used by error reporting.
+	forth_scell_t	symbol_source_id;		// Used by error reporting.
 	forth_cell_t	blk;					// Forth: BLK
 	forth_cell_t	source_id;				// Forth: SOURCE-ID
 	const char		*source_address;		// Used by SOURCE.
 	forth_cell_t	source_length;			// Used by SOURCE.
 	forth_cell_t	to_in;					// Forth: >IN
+	forth_cell_t	line_no;				// Line number for files scripts, etc.
 #if defined(FORTH_INCLUDE_FILE_ACCESS_WORDS)
 	forth_dcell_t	source_file_position;
-	forth_cell_t	line_no;
 	char file_buffer[FORTH_FILE_INPUT_BUFFER_LENGTH];
 #endif
 	forth_cell_t	*wordlists;				// Wordlists in the search order.

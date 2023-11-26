@@ -1633,6 +1633,8 @@ void forth_refill(forth_runtime_context_t *ctx)
         ctx->source_length = 0;
         ctx->source_address = ctx->tib;
         ctx->to_in = 0;
+		ctx->line_no = 0;
+
         if (0 == ctx->accept_string)
         {
             forth_PUSH(ctx, FORTH_FALSE);
@@ -1654,7 +1656,7 @@ void forth_refill(forth_runtime_context_t *ctx)
         }
 
     }
-    else if (-1 == ctx->source_id)
+    else if ((-1 == ctx->source_id) || (-2 == ctx->source_id))
     {
         forth_PUSH(ctx, FORTH_FALSE);
     }
@@ -2102,6 +2104,11 @@ void forth_dump(forth_runtime_context_t *ctx)
 // ---------------------------------------------------------------------------------------------------------------
 //                                                  Input Parsing
 // ---------------------------------------------------------------------------------------------------------------
+static int forth_IsEOL(char c)
+{
+	return ('\r' == c) || ('\n' == c) || ('\f' == c) || (0 == c);
+}
+#if 0
 static void forth_SKIP_DELIMITERS(const char **buffer, forth_cell_t *length, char delimiter)
 {
 	const char *buff = *buffer;
@@ -2110,6 +2117,14 @@ static void forth_SKIP_DELIMITERS(const char **buffer, forth_cell_t *length, cha
 	if ((FORTH_CHAR_SPACE) == delimiter)
 	{
 		while ((0 != len) && isspace((int)(*buff)))
+		{
+			buff++;
+			len--;
+		}
+	}
+	else if (forth_IsEOL(delimiter))
+	{
+		while ((0 != len) && forth_IsEOL(*buff))
 		{
 			buff++;
 			len--;
@@ -2127,11 +2142,40 @@ static void forth_SKIP_DELIMITERS(const char **buffer, forth_cell_t *length, cha
 	*buffer = buff;
 	*length = *length - len;
 }
-
-static void forth_PARSE_TILL_DELIMITER(const char **buffer, forth_cell_t *length, char delimiter)
+#endif
+static void forth_SkipWhiteSpace(const char **buffer, forth_cell_t *length, forth_cell_t *eol_count)
 {
 	const char *buff = *buffer;
 	forth_cell_t len = *length;
+
+	while ((0 != len) && isspace((int)(*buff)))
+	{
+		if (forth_IsEOL(*buff))
+		{
+			(*eol_count)++;
+			if (('\r' == buff[0]) && (1 < len))
+			{
+				if ('\n' == buff[1])
+				{
+					buff++;
+					len--;
+				}
+			}
+		}
+
+		buff++;
+		len--;
+	}
+
+	*buffer = buff;
+	*length = *length - len;
+}
+
+static forth_cell_t forth_ParseTillDelimiter(const char *buff, forth_cell_t *length, char delimiter, forth_cell_t *eol_count)
+{
+	//const char *buff = *buffer;
+	forth_cell_t len = *length;
+	forth_cell_t token_length;
 
 #if defined(DEBUG_PARSE)
 	printf("-----------------------------------------------------------------\n");
@@ -2146,19 +2190,68 @@ static void forth_PARSE_TILL_DELIMITER(const char **buffer, forth_cell_t *length
 			buff++;
 			len--;
 		}
+
+		token_length  = *length - len;
+
+		if (forth_IsEOL(*buff))
+		{
+			*eol_count += 1;
+			if (('\r' == buff[0]) && (1 < len))
+			{
+				if ('\n' == buff[1])
+				{
+					buff++;
+					len--;
+				}
+			}
+		}
+	}
+	else if (forth_IsEOL(delimiter))
+	{
+		while ((0 != len) && !forth_IsEOL(*buff))
+		{
+			buff++;
+			len--;
+		}
+
+		token_length  = *length - len;
+
+		*eol_count += 1;
+		if (('\r' == buff[0]) && (1 < len))
+		{
+			if ('\n' == buff[1])
+			{
+				buff++;
+				len--;
+			}
+		}
 	}
 	else
 	{
 		while ((0 != len) && (delimiter != *buff))
 		{
+			if (forth_IsEOL(*buff))
+			{
+				*eol_count += 1;
+				if (('\r' == buff[0]) && (1 < len))
+				{
+					if ('\n' == buff[1])
+					{
+						buff++;
+						len--;
+					}
+				}
+			}
 			// putchar(*buff);
 			buff++;
 			len--;
 		}
+		token_length  = *length - len;
 	}
 
 	// *buffer = buff;
 	*length = *length - len;
+	return token_length;
 }
 
 // ( delim -- c-addr len|0 )
@@ -2167,6 +2260,8 @@ void forth_parse(forth_runtime_context_t *ctx)
     char delimiter;
 	const char *address;
 	forth_cell_t length;
+	forth_cell_t eol_count = 0;
+	forth_cell_t token_length;
 
     delimiter = (char)forth_POP(ctx);
 
@@ -2181,7 +2276,7 @@ void forth_parse(forth_runtime_context_t *ctx)
 #if defined(DEBUG_PARSE)
 		printf("%s (start) address=%p length=%u\n", __FUNCTION__, address, length);
 #endif
-		forth_PARSE_TILL_DELIMITER(&address, &length, delimiter);
+		token_length = forth_ParseTillDelimiter(address, &length, delimiter, &eol_count);
 #if defined(DEBUG_PARSE)
 		printf("%s (ret) address=%p length=%u\n", __FUNCTION__, address, length);
 		rctx->write_string(rctx, address, length);
@@ -2194,8 +2289,10 @@ void forth_parse(forth_runtime_context_t *ctx)
 			ctx->to_in++;
 		}
 
+		ctx->line_no += eol_count;
+
         forth_PUSH(ctx, (forth_cell_t)address);
-        forth_PUSH(ctx, length);
+        forth_PUSH(ctx, token_length);
 	}
 	else
 	{
@@ -2251,6 +2348,7 @@ void forth_parse_name(forth_runtime_context_t *ctx)
 	forth_cell_t length;
     char dlm = FORTH_CHAR_SPACE;
     //char dlm = (char)forth_POP(ctx);
+	forth_cell_t eol_count = 0;
 
 
 #if defined(DEBUG_PARSE)
@@ -2266,12 +2364,14 @@ void forth_parse_name(forth_runtime_context_t *ctx)
 #if defined(DEBUG_PARSE)
 		printf("%s: >>Skip: addr = %p, len = %u\n", __FUNCTION__, address, length);
 #endif
-		forth_SKIP_DELIMITERS(&address, &length, dlm);
+		//forth_SKIP_DELIMITERS(&address, &length, dlm);
+		forth_SkipWhiteSpace(&address, &length, &eol_count);
 #if defined(DEBUG_PARSE)
 		printf("%s: <<Skip: addr = %p, len = %u\n", __FUNCTION__, address, length);
 #endif
 
 		ctx->to_in += length;
+		ctx->line_no += eol_count;
 
         forth_PUSH(ctx, dlm);
 		forth_parse(ctx);
@@ -2449,6 +2549,10 @@ void forth_interpret(forth_runtime_context_t *ctx)
 
 		ctx->symbol_addr = symbol_addr;
 		ctx->symbol_length = symbol_len;
+		ctx->symbol_line = ctx->line_no;
+		ctx->symbol_source_id = ctx->source_id;
+		ctx->symbol_blk = ctx->blk;
+		ctx->symbol_position = ctx->to_in;
 
         forth_PUSH(ctx, symbol_addr);
         forth_PUSH(ctx, symbol_len);
@@ -2529,6 +2633,13 @@ void forth_backslash(forth_runtime_context_t *ctx)
 		return;
 	}
 #endif
+	if (-2 == ctx->source_id) // Kind of like a multi-line EVALUATE.
+	{
+		forth_PUSH(ctx, (forth_cell_t)'\n');
+		forth_parse(ctx);
+		forth_2drop(ctx);
+		return;
+	}
 	ctx->to_in = ctx->source_length;
 }
 // ---------------------------------------------------------------------------------------------------------------
@@ -2554,8 +2665,25 @@ void forth_PRINT_ERROR(forth_runtime_context_t *ctx, forth_scell_t code)
 // If needed port code here from EFCI, but currently not supported.
 #endif
 
-	forth_TYPE0(ctx, " @position: ");
-	forth_DOT(ctx, 10, ctx->to_in);
+	if (0 == ctx->symbol_blk)
+	{
+		if ((0 != ctx->symbol_source_id) && (-1 != ctx->symbol_source_id))
+		{
+			forth_TYPE0(ctx, " Line: ");
+			forth_DOT(ctx, 10, ctx->symbol_line + 1);
+		}
+	}
+	else
+	{
+		forth_TYPE0(ctx, " BLK: #");
+		forth_DOT(ctx, 10, ctx->symbol_blk);
+		//forth_TYPE0(ctx, " @position: ");
+		forth_TYPE0(ctx, "Line: ");
+		forth_DOT(ctx, 10, 1 + (ctx->symbol_position / 64));
+		forth_TYPE0(ctx," at ");
+		forth_DOT(ctx, 10, 1 + (ctx->symbol_position % 64));
+	}
+
 	forth_TYPE0(ctx, " Error: ");
 	forth_DOT(ctx, 10, code);
 
@@ -2771,8 +2899,8 @@ void forth_restore_input(forth_runtime_context_t *ctx)
 	}
 }
 
-// EVALUATE ( i * x c-addr u -- j * x )
-void forth_evaluate(forth_runtime_context_t *ctx)
+// A factor of EVALUATE ( i * x c-addr u -- j * x )
+void forth_EVAL(forth_runtime_context_t *ctx, forth_scell_t source_id)
 {
 	forth_scell_t res;
 	forth_cell_t len = forth_POP(ctx);
@@ -2780,6 +2908,7 @@ void forth_evaluate(forth_runtime_context_t *ctx)
 	forth_cell_t saved_source_id = ctx->source_id;
 	forth_cell_t saved_blk = ctx->blk;
 	forth_cell_t saved_in = ctx->to_in;
+	forth_cell_t saved_line_no = ctx->line_no;
 	const char *saved_source_address = ctx->source_address;
 	forth_cell_t saved_source_length = ctx->source_length;
 
@@ -2794,17 +2923,19 @@ void forth_evaluate(forth_runtime_context_t *ctx)
 		forth_THROW(ctx, -9); // Invalid address.
 	}
 
-	ctx->source_id = -1;
+	ctx->source_id = source_id;
 	ctx->blk = 0;
 	ctx->source_address = (const char *)addr;
 	ctx->source_length = len;
 	ctx->to_in = 0;
+	ctx->line_no = 0;
 
     res = forth_CATCH(ctx, forth_interpret_xt);
 
 	ctx->source_id = saved_source_id;
 	ctx->blk = saved_blk;
 	ctx->to_in = saved_in;
+	ctx->line_no = saved_line_no;
 	ctx->source_address = saved_source_address;
 	ctx->source_length = saved_source_length;
 #if defined(FORTH_INCLUDE_BLOCKS)
@@ -2814,6 +2945,18 @@ void forth_evaluate(forth_runtime_context_t *ctx)
     }
 #endif
 	forth_THROW(ctx, res);
+}
+
+// EVALUATE ( i * x c-addr u -- j * x )
+void forth_evaluate(forth_runtime_context_t *ctx)
+{
+	forth_EVAL(ctx, -1);
+}
+
+// EVALUATE-SCRIPT ( i * x c-addr u -- j * x )
+void forth_evaluate_script(forth_runtime_context_t *ctx)
+{
+		forth_EVAL(ctx, -2);
 }
 
 // QUIT ( -- ) ( R: i * x -- )
@@ -2836,6 +2979,7 @@ void forth_quit(forth_runtime_context_t *ctx)
     ctx->rp = ctx->rp0;
     ctx->throw_handler = 0;
     ctx->source_id = 0;
+	ctx->line_no = 0;
     ctx->state = 0;
 
     while(1)
@@ -4163,8 +4307,14 @@ void forth_bracket_undefined(forth_runtime_context_t *ctx)
 void forth_tick(forth_runtime_context_t *ctx)
 {
     forth_parse_name(ctx);
+
 	ctx->symbol_addr = ctx->sp[1];
 	ctx->symbol_length = ctx->sp[0];
+	ctx->symbol_line = ctx->line_no;
+	ctx->symbol_source_id = ctx->source_id;
+	ctx->symbol_blk = ctx->blk;
+	ctx->symbol_position = ctx->to_in;
+
     forth_find_name(ctx);
 
     if (0 == ctx->sp[0])
@@ -4453,6 +4603,7 @@ DEF_FORTH_WORD("abort\"",     FORTH_XT_FLAGS_IMMEDIATE, forth_abort_quote,    "(
 
 DEF_FORTH_WORD("depth",      0, forth_depth,         "( -- depth )"),
 DEF_FORTH_WORD("evaluate",   0, forth_evaluate,		 "( c-addr len -- )"),
+DEF_FORTH_WORD("evaluate-script",   0, forth_evaluate_script,		 "It is like EVALUATE but allow multi-line input."),
 DEF_FORTH_WORD("help",       0, forth_help,          "( -- )"),
 DEF_FORTH_WORD("see",        0, forth_see,           "( \"name\"-- )"),
 DEF_FORTH_WORD("quit",       0, forth_quit,          "( -- )"),
@@ -4628,6 +4779,8 @@ forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int 
         return -9; // Invalid memory address, is there anything better here?
     }
 
+	ctx->line_no = 0;
+
 	if ((0 == ctx->sp) || (0 == ctx->sp0) || (0 == ctx->sp_max) || (0 == ctx->sp_min) ||
 	    (0 == ctx->rp) || (0 == ctx->rp0) || (0 == ctx->rp_max) || (0 == ctx->rp_min))
 	{
@@ -4676,7 +4829,7 @@ forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int 
     ctx->to_in = 0;
     ctx->source_address = cmd;
     ctx->source_length = cmd_length;
-	ctx->source_id = -1;
+	ctx->source_id = -2;	// Multi-line evaluate.
 	ctx->blk = 0;
 
     res = forth_RUN_INTERPRET(ctx);

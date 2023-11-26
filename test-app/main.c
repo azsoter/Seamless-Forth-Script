@@ -37,6 +37,7 @@ int main()
     int res;
     puts("Hello World!");
     res = forth_run_forth_stdio(128, 128, "quit");
+    //res = forth_run_forth_stdio(128, 128, ".( Hello World !) cr\r\n\\ Comment\r \\ Other comment \n 1 2 + . cr \r\n xxx");
     printf("result = %d\r\n", res);
     return 0;
 }

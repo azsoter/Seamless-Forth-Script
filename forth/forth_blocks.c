@@ -256,6 +256,7 @@ void forth_load(forth_runtime_context_t *ctx)
     forth_cell_t blk = forth_POP(ctx);
 	forth_cell_t saved_blk = ctx->blk;
 	forth_cell_t saved_in = ctx->to_in;
+    forth_cell_t saved_line_no = ctx->line_no;
 	const char *saved_source_address = ctx->source_address;
 	forth_cell_t saved_source_length = ctx->source_length;
 
@@ -265,6 +266,7 @@ void forth_load(forth_runtime_context_t *ctx)
 	ctx->source_address = (const char *)forth_POP(ctx);
 	ctx->source_length = FORTH_BLOCK_BUFFER_SIZE;
 	ctx->to_in = 0;
+    ctx->line_no = 0;
 
     res = forth_CATCH(ctx, forth_interpret_xt);
 
@@ -272,6 +274,7 @@ void forth_load(forth_runtime_context_t *ctx)
     ctx->source_length = saved_source_length;
     ctx->blk = saved_blk;
 	ctx->to_in = saved_in;
+    ctx->line_no = saved_line_no;
 
     if (0 != saved_blk)
     {
