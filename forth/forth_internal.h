@@ -458,6 +458,7 @@ extern void forth_bracket_char(forth_runtime_context_t *ctx);		// [CHAR]
 #endif
 
 extern void forth_evaluate(forth_runtime_context_t *ctx);
+extern void forth_evaluate_script(forth_runtime_context_t *ctx);
 extern void forth_words(forth_runtime_context_t *ctx);
 extern void forth_see(forth_runtime_context_t *ctx);
 extern void forth_help(forth_runtime_context_t *ctx);
