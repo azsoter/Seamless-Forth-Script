@@ -1714,7 +1714,7 @@ int forth_HDOT(forth_runtime_context_t *ctx, forth_cell_t value)
 int forth_UDOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
-	char *end = buffer + sizeof(ctx->num_buff);
+	char *end = buffer + (sizeof(ctx->num_buff) - 1);
 	char *p;
 	*end = FORTH_CHAR_SPACE;
 	p = forth_FORMAT_UNSIGNED(value, base, 1, end);
@@ -1724,7 +1724,7 @@ int forth_UDOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t val
 int forth_DOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value)
 {
 	char *buffer = ctx->num_buff;
-	char *end = buffer + sizeof(ctx->num_buff);
+	char *end = buffer + (sizeof(ctx->num_buff) - 1);
 	forth_scell_t val = (forth_scell_t)value;
 	char *p;
 	*end = FORTH_CHAR_SPACE;
@@ -1743,7 +1743,7 @@ int forth_DOT(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t valu
 int forth_DOT_R(forth_runtime_context_t *ctx, forth_cell_t base, forth_cell_t value, forth_cell_t width, forth_cell_t is_signed)
 {
 	char *buffer = ctx->num_buff;
-	char *end = buffer + sizeof(ctx->num_buff);
+	char *end = buffer + (sizeof(ctx->num_buff) - 1);
 	forth_scell_t val = (forth_scell_t)value;
 	char *p;
 	forth_cell_t nlen;
@@ -4727,7 +4727,7 @@ forth_scell_t Forth_InitContext(forth_runtime_context_t *ctx, const forth_contex
 // Run the function which has the signature void f(forth_runtime_context_ctx *ctx) through Forth's CATCH.
 // Return the code from CATCH (i.e. zero on success and a small negative integer on failure).
 // It is useful to run C functions that call things int he Forth system that may throw an exeception.
-// The optinonal NAME is the name to be printed on an execution trace (null is acceptable).
+// The optional NAME is the name to be printed on an execution trace (null is acceptable).
 forth_scell_t Forth_Try(forth_runtime_context_t *ctx, forth_behavior_t f, char *name)
 {
 	forth_vocabulary_entry_t xt;
@@ -4750,6 +4750,7 @@ forth_scell_t Forth_Try(forth_runtime_context_t *ctx, forth_behavior_t f, char *
 //		return -21; // Unsupported opration.
 //	}
 
+	ctx->user_break = 0;
 	xt.name		= (forth_cell_t)((0 != name) ? name : "Some-C-function");
 	xt.flags 	= FORTH_XT_FLAGS_ACTION_PRIMITIVE;
 	xt.meaning = (forth_cell_t)f;
@@ -4807,6 +4808,8 @@ forth_scell_t Forth(forth_runtime_context_t *ctx, const char *cmd, unsigned int 
 		ctx->terminal_height = 25; // Some reasonable default.
 	}
 	
+	ctx->user_break = 0;
+
     ctx->bye_handler = 0;
     ctx->quit_handler = 0;
     ctx->throw_handler = 0;
