@@ -540,6 +540,7 @@ extern void forth_plus_loop(forth_runtime_context_t *ctx);
 extern void forth_literal(forth_runtime_context_t *ctx);
 extern void forth_xliteral(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
+extern void forth_to(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);

@@ -3989,6 +3989,37 @@ void forth_2literal(forth_runtime_context_t *ctx)
 	forth_comma(ctx);
 }
 
+// TO local ( x -- )
+void forth_to(forth_runtime_context_t *ctx)
+{
+	forth_xt_t xt;
+	const char *name;
+	forth_cell_t length;
+
+	forth_parse_name(ctx);
+	length = forth_POP(ctx);
+	name = (const char *)forth_POP(ctx);
+
+	if ((0 == length) || (0 == name))
+	{
+		forth_THROW(ctx, -32); // Invalid name argument. 
+	}
+
+	if (0 != ctx->state)
+	{
+#if defined(FORTH_INCLUDE_LOCALS)
+		xt = (forth_xt_t) forth_find_local(ctx, name, length, 1);
+
+		if (0 != xt)
+		{
+			forth_COMPILE_COMMA(ctx, xt);
+			return;
+		}
+#endif
+	}
+	forth_THROW(ctx, -21);
+}
+
 forth_vocabulary_entry_t *forth_PARSE_NAME_AND_CREATE_ENTRY(forth_runtime_context_t *ctx)
 {
 	forth_parse_name(ctx);
@@ -4700,6 +4731,7 @@ DEF_FORTH_WORD("leave",		0, forth_leave,                     "( -- )"),
 DEF_FORTH_WORD("loop",      FORTH_XT_FLAGS_IMMEDIATE, forth_loop,	"( -- )"),
 DEF_FORTH_WORD("+loop",     FORTH_XT_FLAGS_IMMEDIATE, forth_plus_loop, "( inc -- )"),
 
+DEF_FORTH_WORD("to",       FORTH_XT_FLAGS_IMMEDIATE, forth_to,       "( x \"name\" --  )"),
 DEF_FORTH_WORD("literal",  FORTH_XT_FLAGS_IMMEDIATE, forth_literal,       "( x --  )"),
 DEF_FORTH_WORD("xliteral", FORTH_XT_FLAGS_IMMEDIATE, forth_xliteral,      "( xt --  )"),
 DEF_FORTH_WORD("2literal", FORTH_XT_FLAGS_IMMEDIATE, forth_2literal,      "( x y --  )"),
