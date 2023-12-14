@@ -174,6 +174,12 @@ void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt)
 			forth_DoDefer(ctx, xt);
 			break;
 
+#if defined(FORTH_INCLUDE_LOCALS)
+		case FORTH_XT_FLAGS_ACTION_LOCAL:
+		forth_DoLocal(ctx, xt);
+		break;
+#endif
+
 		default:
 			forth_THROW(ctx, -21); // unsupported operation
 			break;
@@ -194,6 +200,11 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 
 	forth_RPUSH(ctx, (forth_cell_t)ctx->ip);
 
+#if defined(FORTH_INCLUDE_LOCALS)
+	forth_RPUSH(ctx, (forth_cell_t)ctx->fp);
+	ctx->fp = ctx->rp;
+#endif
+
 	ctx->ip = &(xt->meaning);
 
 	while (0 != *(ctx->ip))
@@ -201,6 +212,11 @@ void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt)
 		x = (forth_xt_t)*(ctx->ip++);
 		forth_EXECUTE(ctx, x);
 	}
+
+#if defined(FORTH_INCLUDE_LOCALS)
+	ctx->rp = ctx->fp;
+	ctx->fp = (forth_cell_t *)forth_RPOP(ctx);
+#endif
 
 	ctx->ip = (forth_cell_t *)forth_RPOP(ctx);
 }
@@ -322,11 +338,19 @@ void forth_catch(forth_runtime_context_t *ctx)
 		return;
     }
 
+#if defined(FORTH_INCLUDE_LOCALS)
+	ctx->rp -= 4;
+#else
 	ctx->rp -= 3;
+#endif
+
 	saved_rp = ctx->rp;
 	ctx->rp[0] = ctx->throw_handler;
 	ctx->rp[1] = (forth_cell_t)ctx->sp;
 	ctx->rp[2] = (forth_cell_t)ctx->ip;
+#if defined(FORTH_INCLUDE_LOCALS)
+	ctx->rp[3] = (forth_cell_t)ctx->fp;
+#endif
 
     res = setjmp(catch_frame);
 
@@ -342,11 +366,17 @@ void forth_catch(forth_runtime_context_t *ctx)
 		ctx->rp = saved_rp;
         ctx->sp = (forth_cell_t *)ctx->rp[1];
 		ctx->ip = (forth_cell_t *)ctx->rp[2];
+		ctx->fp = (forth_cell_t *)ctx->rp[3];
         *(ctx->sp) = res;
     }
 
     ctx->throw_handler = ctx->rp[0];
+
+#if defined(FORTH_INCLUDE_LOCALS)
+	ctx->rp += 4;
+#else
 	ctx->rp += 3;
+#endif
 }
 #endif
 
@@ -2554,10 +2584,21 @@ void forth_interpret(forth_runtime_context_t *ctx)
 		ctx->symbol_blk = ctx->blk;
 		ctx->symbol_position = ctx->to_in;
 
-        forth_PUSH(ctx, symbol_addr);
-        forth_PUSH(ctx, symbol_len);
-        forth_find_name(ctx);
-		xt = (forth_xt_t)forth_POP(ctx);
+		xt = 0;
+
+#if defined(FORTH_INCLUDE_LOCALS)
+		if (0 != ctx->state)
+		{
+			xt = (forth_xt_t) forth_find_local(ctx, (const char *)symbol_addr, symbol_len, 0);
+		}
+#endif
+		if (0 == xt)
+		{
+        	forth_PUSH(ctx, symbol_addr);
+        	forth_PUSH(ctx, symbol_len);
+        	forth_find_name(ctx);
+			xt = (forth_xt_t)forth_POP(ctx);
+		}
 
         if (0 != xt)
         {
@@ -2854,6 +2895,9 @@ forth_scell_t forth_RUN_INTERPRET(forth_runtime_context_t *ctx)
 
     	forth_PRINT_ERROR(ctx, res);
 		ctx->state = 0;
+#if defined(FORTH_INCLUDE_LOCALS)
+		ctx->dictionary->local_count = 0;
+#endif
 		ctx->defining = 0;
 	}
     return res;
@@ -3377,6 +3421,23 @@ void forth_plus_loop(forth_runtime_context_t *ctx)
 }
 #endif
 
+#if defined(FORTH_INCLUDE_LOCALS)
+// Details of how local variables are implemented.
+void forth_DoLocal(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_scell_t ix = (forth_scell_t)(xt->meaning & ((forth_cell_t)(FORTH_LOCALS_INDEX_MASK)));
+
+	if (0 == (xt->meaning & (forth_cell_t)(FORTH_LOCALS_WRITE_MASK)))
+	{
+		forth_PUSH(ctx, ctx->fp[-(ix+1)]);
+	}
+	else
+	{
+		ctx->fp[-(ix+1)] = forth_POP(ctx);
+	}
+}
+#endif
+
 // Details of how constants are implemented.
 void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -3448,6 +3509,50 @@ void forth_slit(forth_runtime_context_t *ctx)
 	ip += len;
 	ctx->ip = (forth_cell_t *)(FORTH_ALIGN(ip));
 }
+
+#if defined(FORTH_INCLUDE_LOCALS)
+// local@ ( -- val )
+void forth_fetch_local(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -9); // Invalid address.
+	}
+
+	if (0 == ctx->fp)
+	{
+		forth_THROW(ctx, -9); // Invalid address.
+	}
+
+	forth_PUSH(ctx, ctx->fp[*(ctx->ip++)]);
+}
+
+// local! ( val -- )
+void forth_store_local(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->dictionary)
+	{
+		forth_THROW(ctx, -21); // Unsupported opration.
+	}
+
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -9); // Invalid address.
+	}
+
+	if (0 == ctx->fp)
+	{
+		forth_THROW(ctx, -9); // Invalid address.
+	}
+
+	ctx->fp[*(ctx->ip++)] = forth_POP(ctx);
+}
+#endif
 
 // HERE ( -- addr )
 void forth_here(forth_runtime_context_t *ctx)
@@ -3927,6 +4032,10 @@ void forth_colon(forth_runtime_context_t *ctx)
 {
 	forth_vocabulary_entry_t *entry;
 
+#if defined(FORTH_INCLUDE_LOCALS)
+	ctx->dictionary->local_count = 0;
+#endif
+
 	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
 	entry->flags = FORTH_XT_FLAGS_ACTION_THREADED;
 	forth_PUSH(ctx, (forth_cell_t)entry);
@@ -3939,6 +4048,10 @@ static const char *nameless = "";
 // :NONAME ( -- xt colon-sys )
 void forth_colon_noname(forth_runtime_context_t *ctx)
 {
+#if defined(FORTH_INCLUDE_LOCALS)
+	ctx->dictionary->local_count = 0;
+#endif
+
 	forth_align(ctx);
 	forth_here(ctx);	// xt
 	forth_COMMA(ctx, (forth_cell_t)nameless);
@@ -3974,6 +4087,9 @@ void forth_semicolon(forth_runtime_context_t *ctx)
 		forth_SET_LATEST(ctx, entry);
 	}
 
+#if defined(FORTH_INCLUDE_LOCALS)
+	ctx->dictionary->local_count = 0;
+#endif
 	ctx->defining = 0;
 	forth_left_bracket(ctx);
 }
@@ -4187,6 +4303,20 @@ void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 			ip+= 4;	// sizeof(forth_vocabulary_entry_struct) in cells.
 			forth_TYPE0(ctx, "does> ");
 		}
+	#if defined(FORTH_INCLUDE_LOCALS)
+	else if (forth_init_locals_xt == x)
+		{
+			tmp = ip[1];
+			ip += 1;
+			forth_TYPE0(ctx, " [ ' ");
+			forth_TYPE0(ctx, (const char *)x->name);
+			forth_TYPE0(ctx, " COMPILE, ");
+			forth_PUSH(ctx, tmp);
+			forth_dot(ctx);
+			forth_TYPE0(ctx, ", ] ");
+			forth_space(ctx);
+		}
+	#endif
 		else
 		{
 			forth_PRINT_NAME(ctx, x);
@@ -4621,6 +4751,10 @@ DEF_FORTH_WORD( "sp!",  	 0, forth_sp_store,      "( sp -- )"),
 DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
 DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
+#if defined(FORTH_INCLUDE_LOCALS)
+DEF_FORTH_WORD("(local)",    0, forth_paren_local,     "( c-addr len -- )"),
+DEF_FORTH_WORD("locals|", FORTH_XT_FLAGS_IMMEDIATE, forth_locals_bar,         "LOCALS| x y |"),
+#endif
 DEF_FORTH_WORD( ".version",  0, forth_print_version, "( -- ) Print the version number of the forth engine."),
 DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_ENGINE_VERSION, "( -- v ) The version number of the forth engine."),
 DEF_FORTH_WORD(0, 0, 0, 0)

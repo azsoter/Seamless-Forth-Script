@@ -39,8 +39,6 @@ extern "C" {
 #else
 #endif
 
-#include <forth_config_default.h>
-
 #define FORTH_TIB_SIZE 256
 #define FORTH_ALLOW_0X_HEX 1
 
@@ -53,6 +51,12 @@ extern "C" {
 #   define FORTH_BLOCK_BUFFERS_COUNT 3
 #   define FORTH_MAX_BLOCKS 256
 #endif
+
+#if !defined(FORTH_WITHOUT_COMPILATION)
+#define FORTH_INCLUDE_LOCALS 1
+#endif
+
+#include <forth_config_default.h>
 
 // Get a human readable message for for non-standard (system defined) exceptions.
 // #define FORTH_RETRIEVE_SYSTEM_DEFINED_ERROR_MESSAGE(CODE) forth_retrieve_system_defined_error_message(CODE)

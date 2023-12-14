@@ -80,6 +80,13 @@ typedef forth_ucell_t forth_cell_t;
 
 #define FORTH_NUM_BUFF_LENGTH (128 + 4)
 
+#if defined(FORTH_INCLUDE_LOCALS)
+#define FORTH_LOCALS_NAME_MAX_LENGTH 31
+#define FORTH_LOCALS_MAX_COUNT 16
+#define FORTH_LOCALS_INDEX_MASK 0x000F
+#define FORTH_LOCALS_WRITE_MASK    0x8000
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -69,6 +69,11 @@ typedef forth_vocabulary_entry_t *forth_xt_t;
 #define FORTH_XT_FLAGS_ACTION_DEFER		0x03
 #define	FORTH_XT_FLAGS_ACTION_THREADED	0x04
 #define	FORTH_XT_FLAGS_ACTION_CREATE	0x05
+#define	FORTH_XT_FLAGS_ACTION_LOCAL		0x06
+
+#if defined(FORTH_INCLUDE_LOCALS)
+
+#endif
 
 // A wordlist (as in the structure create by the word WORDLIST in the SEARCH ORDER word set).
 struct forth_wordlist_s
@@ -88,6 +93,11 @@ struct forth_dictionary
 	forth_ucell_t	 dp_max;		// Max value of dp.
 	forth_wordlist_t forth_wl;  	// FORTH-WORDLIST
 	forth_cell_t	 last_wordlist;	// Link to the most recently defined wordlist.
+#if defined(FORTH_INCLUDE_LOCALS)
+	forth_cell_t 	local_count;	// The number of local variables in the current definition.
+	// We need an area to store the names of local variables during compilation, this is as good a spot as any.
+	char local_names[FORTH_LOCALS_MAX_COUNT][FORTH_LOCALS_NAME_MAX_LENGTH+1];
+#endif
 	uint8_t 		 items[1];		// Place holder for the rest of the dictionary.
 };
 
@@ -143,6 +153,9 @@ struct forth_runtime_context
 	forth_cell_t	*rp0;					// The default value of the return stack pointer (should be rp_max).
 	forth_cell_t	*rp;					// The current value of the return stack pointer.
 	forth_cell_t	*ip;					// The Instruction Pointer (IP) of the threaded code interpreter.
+#if defined(FORTH_INCLUDE_LOCALS)
+	forth_cell_t	*fp;					// Frame Pointer for implementing local variables.
+#endif
 	forth_cell_t	base;					// Numeric base (Forth: BASE).
 	forth_cell_t	state;					// Compilation state (Forth: STATE).
 	forth_cell_t	throw_handler;			// Handler for CATCH and THROW.
@@ -267,12 +280,22 @@ extern forth_cell_t forth_POP(forth_runtime_context_t *ctx);
 extern forth_dcell_t forth_DTOS_READ(forth_runtime_context_t *ctx);
 extern forth_dcell_t forth_DPOP(forth_runtime_context_t *ctx);
 extern void forth_DPUSH(forth_runtime_context_t *ctx, forth_dcell_t ud);
+extern void forth_RPUSH(forth_runtime_context_t *ctx, forth_ucell_t x);
+extern forth_cell_t forth_RPOP(forth_runtime_context_t *ctx);
 
 #if !defined(FORTH_WITHOUT_COMPILATION)
 extern forth_vocabulary_entry_t *forth_GET_LATEST(forth_runtime_context_t *ctx);
 extern void forth_SET_LATEST(forth_runtime_context_t *ctx, forth_vocabulary_entry_t *token);
 extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
 #define forth_COMPILE_COMMA(CTX , XT) forth_COMMA((CTX), (forth_cell_t)(XT))
+
+#if defined(FORTH_INCLUDE_LOCALS)
+extern void forth_paren_local(forth_runtime_context_t *ctx); // (LOCAL)
+extern void forth_locals_bar(forth_runtime_context_t *ctx); // LOCALS|
+extern const forth_vocabulary_entry_t *forth_find_local(forth_runtime_context_t *ctx, const char *name, forth_cell_t len, int write);
+extern const forth_xt_t forth_init_locals_xt;
+#endif
+
 #endif
 
 extern void forth_TYPE0(forth_runtime_context_t *ctx, const char *str);
@@ -283,6 +306,7 @@ extern void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoDefer(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoCreate(forth_runtime_context_t *ctx, forth_xt_t xt);
+extern void forth_DoLocal(forth_runtime_context_t *ctx, forth_xt_t xt);
 
 // Primitives
 extern void forth_execute(forth_runtime_context_t *ctx);

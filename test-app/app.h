@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define DICTIONARY_SIZE 256 /* cells */
+#define DICTIONARY_SIZE 512 /* cells */
 
 extern forth_cell_t dictionary[DICTIONARY_SIZE];
 
