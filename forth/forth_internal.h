@@ -62,7 +62,8 @@ typedef forth_vocabulary_entry_t *forth_xt_t;
 #endif
 
 #define FORTH_XT_FLAGS_IMMEDIATE 		0x80
-#define FORTH_XT_FLAGS_ACTION_MASK		0x07
+
+#define FORTH_XT_FLAGS_ACTION_MASK		0x0f
 #define FORTH_XT_FLAGS_ACTION_PRIMITIVE	0x00
 #define FORTH_XT_FLAGS_ACTION_CONSTANT	0x01
 #define FORTH_XT_FLAGS_ACTION_VARIABLE	0x02
@@ -70,6 +71,10 @@ typedef forth_vocabulary_entry_t *forth_xt_t;
 #define	FORTH_XT_FLAGS_ACTION_THREADED	0x04
 #define	FORTH_XT_FLAGS_ACTION_CREATE	0x05
 #define	FORTH_XT_FLAGS_ACTION_LOCAL		0x06
+#define FORTH_XT_FLAGS_ACTION_VALUE		0x07
+#define FORTH_XT_FLAGS_ACTION_2CONSTANT	0x08
+#define FORTH_XT_FLAGS_ACTION_2VARIABLE	0x09
+#define FORTH_XT_FLAGS_ACTION_2VALUE	0x0a
 
 #if defined(FORTH_INCLUDE_LOCALS)
 
@@ -303,6 +308,7 @@ extern void forth_EMIT(forth_runtime_context_t *ctx, char c);
 
 extern void forth_InnerInterpreter(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt);
+extern void forth_DoConst2(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoVar(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoDefer(forth_runtime_context_t *ctx, forth_xt_t xt);
 extern void forth_DoCreate(forth_runtime_context_t *ctx, forth_xt_t xt);
@@ -543,7 +549,11 @@ extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_to(forth_runtime_context_t *ctx);
 extern void forth_sliteral(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
+extern void forth_2variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);
+extern void forth_2constant(forth_runtime_context_t *ctx);
+extern void forth_value(forth_runtime_context_t *ctx);
+extern void forth_2value(forth_runtime_context_t *ctx);
 extern void forth_create(forth_runtime_context_t *ctx);				// CREATE
 extern void forth_to_body(forth_runtime_context_t *ctx);			// >BODY
 extern void forth_p_does(forth_runtime_context_t *ctx);				// (does>)

@@ -162,8 +162,24 @@ void forth_EXECUTE(forth_runtime_context_t *ctx, forth_xt_t xt)
 			forth_DoVar(ctx, xt);
 			break;
 
+		case FORTH_XT_FLAGS_ACTION_2VARIABLE:
+			forth_DoVar(ctx, xt); // Same as a single variable.
+			break;
+
 		case FORTH_XT_FLAGS_ACTION_CONSTANT:
 			forth_DoConst(ctx, xt);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_2CONSTANT:
+			forth_DoConst2(ctx, xt);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_VALUE:
+			forth_DoConst(ctx, xt);	// Same as a constant.
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_2VALUE:
+			forth_DoConst2(ctx, xt);
 			break;
 
 		case FORTH_XT_FLAGS_ACTION_CREATE:
@@ -3444,6 +3460,14 @@ void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt)
 	forth_PUSH(ctx, xt->meaning);
 }
 
+// Details of how constants are implemented.
+void forth_DoConst2(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_PUSH(ctx, (&(xt->meaning))[1]);
+	forth_PUSH(ctx, xt->meaning);
+}
+
+
 // Details of how DEFER-ed words are implemented.
 void forth_DoDefer(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -3989,6 +4013,37 @@ void forth_2literal(forth_runtime_context_t *ctx)
 	forth_comma(ctx);
 }
 
+// (assign-to) ( ?*x xt -- )
+void forth_assign_to(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry = (forth_vocabulary_entry_t *)forth_POP(ctx);
+
+	if (0 == entry)
+	{
+		forth_THROW(ctx, -9); // Invalid memory address.
+	}
+
+	switch(entry->flags & FORTH_XT_FLAGS_ACTION_MASK)
+	{
+		case FORTH_XT_FLAGS_ACTION_DEFER:
+			entry->meaning = forth_POP(ctx);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_VALUE:
+			entry->meaning = forth_POP(ctx);
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_2VALUE:
+			entry->meaning = forth_POP(ctx);
+			(&(entry->meaning))[1] = forth_POP(ctx);
+			break;
+
+		default:
+			forth_THROW(ctx, -21); // Unsupported operation.
+			break;
+	}
+}
+
 // TO local ( x -- )
 void forth_to(forth_runtime_context_t *ctx)
 {
@@ -4044,6 +4099,19 @@ void forth_variable(forth_runtime_context_t *ctx)
 	forth_SET_LATEST(ctx, entry);
 }
 
+// 2VARIABLE ( "name" -- )
+void forth_2variable(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_2VARIABLE;
+	forth_COMMA(ctx, 0); // Meaning.
+	forth_COMMA(ctx, 0); 
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
+}
+
 // CONSTANT ( value "name" -- )
 void forth_constant(forth_runtime_context_t *ctx)
 {
@@ -4054,6 +4122,49 @@ void forth_constant(forth_runtime_context_t *ctx)
 	entry->flags = FORTH_XT_FLAGS_ACTION_CONSTANT;
 	//entry->meaning = value;
 	forth_COMMA(ctx, value); // Meaning.
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
+}
+
+// 2CONSTANT ( dvalue "name" -- )
+void forth_2constant(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+	forth_cell_t value_h = forth_POP(ctx);
+	forth_cell_t value_l = forth_POP(ctx);
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_2CONSTANT;
+	forth_COMMA(ctx, value_h); // Meaning.
+	forth_COMMA(ctx, value_l); 
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
+}
+
+// VALUE ( value "name" -- )
+void forth_value(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+	forth_cell_t value = forth_POP(ctx);
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_VALUE;
+	forth_COMMA(ctx, value); // Meaning.
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
+}
+
+// 2VALUE ( dvalue "name" -- )
+void forth_2value(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+	forth_cell_t value_h = forth_POP(ctx);
+	forth_cell_t value_l = forth_POP(ctx);
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_2VALUE;
+	forth_COMMA(ctx, value_h); // Meaning.
+	forth_COMMA(ctx, value_l); 
 	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
 	forth_SET_LATEST(ctx, entry);
 }
@@ -4743,7 +4854,11 @@ DEF_FORTH_WORD(";", FORTH_XT_FLAGS_IMMEDIATE, forth_semicolon, "( colon-sys -- )
 DEF_FORTH_WORD("immediate",  0, forth_immediate,     "( -- )"),
 DEF_FORTH_WORD("latest",     0, forth_latest,        "( -- addr )"),
 DEF_FORTH_WORD("variable",   0, forth_variable,      "( \"name\" -- )"),
+DEF_FORTH_WORD("2variable",  0, forth_2variable,     "( \"name\" -- )"),
 DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" -- )"),
+DEF_FORTH_WORD("2constant",  0, forth_2constant,     "( d_val \"name\" -- )"),
+DEF_FORTH_WORD("value",      0, forth_value,         "( val \"name\" -- )"),
+DEF_FORTH_WORD("2value",     0, forth_2value,        "( d_val \"name\" -- )"),
 DEF_FORTH_WORD("create",     0, forth_create,        "( \"name\" -- )"),
 DEF_FORTH_WORD(">body",      0, forth_to_body,       "( xt -- addr )"),
 DEF_FORTH_WORD("does>",  FORTH_XT_FLAGS_IMMEDIATE, forth_does, "( -- )"),
