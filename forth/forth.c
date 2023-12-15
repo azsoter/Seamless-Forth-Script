@@ -3969,6 +3969,19 @@ void forth_2literal(forth_runtime_context_t *ctx)
 	forth_comma(ctx);
 }
 
+// meaning@ ( xt -- meaning ) // Used for things like DEFER@
+void forth_read_meaning(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry = (forth_vocabulary_entry_t *)forth_POP(ctx);
+
+	if (0 == entry)
+	{
+		forth_THROW(ctx, -9); // Invalid memory address.
+	}
+
+	forth_PUSH(ctx, entry->meaning);	
+}
+
 // (assign-to) ( ?*x xt -- )
 void forth_assign_to(forth_runtime_context_t *ctx)
 {
@@ -4082,6 +4095,19 @@ forth_vocabulary_entry_t *forth_PARSE_NAME_AND_CREATE_ENTRY(forth_runtime_contex
 	}
 
 	return forth_CREATE_DICTIONARY_ENTRY(ctx);
+}
+
+// DEFER ( "name" -- )
+void forth_defer(forth_runtime_context_t *ctx)
+{
+	forth_vocabulary_entry_t *entry;
+
+	entry = forth_PARSE_NAME_AND_CREATE_ENTRY(ctx);
+	entry->flags = FORTH_XT_FLAGS_ACTION_DEFER;
+	//entry->meaning = value;
+	forth_COMMA(ctx, 0); // Meaning.
+	entry->link = (forth_cell_t)forth_GET_LATEST(ctx);
+	forth_SET_LATEST(ctx, entry);
 }
 
 // VARIABLE ( "name" -- )
@@ -4886,6 +4912,9 @@ DEF_FORTH_WORD("constant",   0, forth_constant,      "( val \"name\" -- )"),
 DEF_FORTH_WORD("2constant",  0, forth_2constant,     "( d_val \"name\" -- )"),
 DEF_FORTH_WORD("value",      0, forth_value,         "( val \"name\" -- )"),
 DEF_FORTH_WORD("2value",     0, forth_2value,        "( d_val \"name\" -- )"),
+DEF_FORTH_WORD("defer",      0, forth_defer,         "( \"name\" -- )"),
+DEF_FORTH_WORD("defer@",     0, forth_read_meaning,  "( xt1 -- xt2 )"),
+DEF_FORTH_WORD("defer!",     0, forth_assign_to,     "( xt2 xt1 -- )"),
 DEF_FORTH_WORD("create",     0, forth_create,        "( \"name\" -- )"),
 DEF_FORTH_WORD(">body",      0, forth_to_body,       "( xt -- addr )"),
 DEF_FORTH_WORD("does>",  FORTH_XT_FLAGS_IMMEDIATE, forth_does, "( -- )"),

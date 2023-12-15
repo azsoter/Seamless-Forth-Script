@@ -549,7 +549,10 @@ extern void forth_xliteral(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
 extern void forth_to(forth_runtime_context_t *ctx);			// TO
 extern void forth_to_runtime(forth_runtime_context_t *ctx); // (TO)
+extern void forth_assign_to(forth_runtime_context_t *ctx); // A factor of (TO) and DEFER!
+extern void forth_read_meaning(forth_runtime_context_t *ctx); // Read the meaning field of an XT, e.g. for DEFER@
 extern void forth_sliteral(forth_runtime_context_t *ctx);
+extern void forth_defer(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_2variable(forth_runtime_context_t *ctx);
 extern void forth_constant(forth_runtime_context_t *ctx);
@@ -564,7 +567,7 @@ extern void forth_colon_noname(forth_runtime_context_t *ctx);
 extern void forth_colon(forth_runtime_context_t *ctx);
 extern void forth_semicolon(forth_runtime_context_t *ctx);
 extern void forth_immediate(forth_runtime_context_t *ctx);
-void forth_latest(forth_runtime_context_t *ctx);
+extern void forth_latest(forth_runtime_context_t *ctx);
 extern void forth_recurse(forth_runtime_context_t *ctx);
 extern void forth_exit(forth_runtime_context_t *ctx);
 #endif
