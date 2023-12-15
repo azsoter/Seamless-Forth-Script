@@ -3534,50 +3534,6 @@ void forth_slit(forth_runtime_context_t *ctx)
 	ctx->ip = (forth_cell_t *)(FORTH_ALIGN(ip));
 }
 
-#if defined(FORTH_INCLUDE_LOCALS)
-// local@ ( -- val )
-void forth_fetch_local(forth_runtime_context_t *ctx)
-{
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // Unsupported opration.
-	}
-
-	if (0 == ctx->ip)
-	{
-		forth_THROW(ctx, -9); // Invalid address.
-	}
-
-	if (0 == ctx->fp)
-	{
-		forth_THROW(ctx, -9); // Invalid address.
-	}
-
-	forth_PUSH(ctx, ctx->fp[*(ctx->ip++)]);
-}
-
-// local! ( val -- )
-void forth_store_local(forth_runtime_context_t *ctx)
-{
-	if (0 == ctx->dictionary)
-	{
-		forth_THROW(ctx, -21); // Unsupported opration.
-	}
-
-	if (0 == ctx->ip)
-	{
-		forth_THROW(ctx, -9); // Invalid address.
-	}
-
-	if (0 == ctx->fp)
-	{
-		forth_THROW(ctx, -9); // Invalid address.
-	}
-
-	ctx->fp[*(ctx->ip++)] = forth_POP(ctx);
-}
-#endif
-
 // HERE ( -- addr )
 void forth_here(forth_runtime_context_t *ctx)
 {
@@ -4044,12 +4000,26 @@ void forth_assign_to(forth_runtime_context_t *ctx)
 	}
 }
 
-// TO local ( x -- )
+// (TO) ( ?*x -- ) Compiled by TO.
+void forth_to_runtime(forth_runtime_context_t *ctx)
+{
+	if (0 == ctx->ip)
+	{
+		forth_THROW(ctx, -21); // Unsupported operation.
+	}
+
+	forth_PUSH(ctx, (forth_cell_t)(ctx->ip[0]));
+	forth_assign_to(ctx);
+	ctx->ip++;
+}
+
+// TO ( ?*x "name" -- )
 void forth_to(forth_runtime_context_t *ctx)
 {
 	forth_xt_t xt;
 	const char *name;
 	forth_cell_t length;
+	forth_cell_t action;
 
 	forth_parse_name(ctx);
 	length = forth_POP(ctx);
@@ -4072,7 +4042,34 @@ void forth_to(forth_runtime_context_t *ctx)
 		}
 #endif
 	}
-	forth_THROW(ctx, -21);
+
+	forth_PUSH(ctx, (forth_cell_t)name);
+    forth_PUSH(ctx, length);
+    forth_find_name(ctx);
+	xt = (forth_xt_t)forth_POP(ctx);
+
+	if (0 == xt)
+    {
+		forth_THROW(ctx, -13); // Undefined name.
+	}
+
+	action = (FORTH_XT_FLAGS_ACTION_MASK & ((forth_vocabulary_entry_t *)xt)->flags);
+
+	if ((FORTH_XT_FLAGS_ACTION_VALUE != action) && (FORTH_XT_FLAGS_ACTION_2VALUE != action) && (FORTH_XT_FLAGS_ACTION_DEFER != action))
+	{
+		forth_THROW(ctx, -32); // Invalid name argument.
+	}
+
+	if (0 == ctx->state)
+	{
+		forth_PUSH(ctx, (forth_cell_t)xt);
+		forth_assign_to(ctx);
+	}
+	else
+	{
+		forth_COMPILE_COMMA(ctx, forth_TO_RT_xt);
+		forth_COMPILE_COMMA(ctx, xt);
+	}
 }
 
 forth_vocabulary_entry_t *forth_PARSE_NAME_AND_CREATE_ENTRY(forth_runtime_context_t *ctx)
@@ -4512,11 +4509,41 @@ void forth_SEE(forth_runtime_context_t *ctx, forth_xt_t xt)
 			forth_TYPE0(ctx, (const char *)(xt->name));
 			break;
 
+		case FORTH_XT_FLAGS_ACTION_2CONSTANT:
+			forth_PUSH(ctx, (&(xt->meaning))[1]);
+			forth_hdot(ctx);
+			forth_PUSH(ctx, xt->meaning);
+			forth_hdot(ctx);
+			forth_TYPE0(ctx, "2CONSTANT ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_VALUE:
+			forth_PUSH(ctx, xt->meaning);
+			forth_hdot(ctx);
+			forth_TYPE0(ctx, "VALUE ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			break;
+
+		case FORTH_XT_FLAGS_ACTION_2VALUE:
+			forth_PUSH(ctx, (&(xt->meaning))[1]);
+			forth_hdot(ctx);
+			forth_PUSH(ctx, xt->meaning);
+			forth_hdot(ctx);
+			forth_TYPE0(ctx, "2VALUE ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			break;
+
 		case FORTH_XT_FLAGS_ACTION_VARIABLE:
 			forth_TYPE0(ctx, "VARIABLE ");
 			forth_TYPE0(ctx, (const char *)(xt->name));
 			break;
-		
+
+		case FORTH_XT_FLAGS_ACTION_2VARIABLE:
+			forth_TYPE0(ctx, "2VARIABLE ");
+			forth_TYPE0(ctx, (const char *)(xt->name));
+			break;
+
 		case FORTH_XT_FLAGS_ACTION_CREATE:
 			forth_TYPE0(ctx, "CREATE ");
 			forth_TYPE0(ctx, (const char *)(xt->name));
@@ -4931,6 +4958,7 @@ DEF_FORTH_WORD("(+LOOP)",	 0, forth_plus_loop_rt,	 " ( inc -- )"),						// 14
 DEF_FORTH_WORD("(does>)",    0, forth_p_does,        "( -- )"),								// 15
 DEF_FORTH_WORD("(abort\")",  0, forth_pabortq,       "( f c-addr len -- )"),				// 16
 DEF_FORTH_WORD( "(do-voc)",	 0, forth_do_voc,	 	 "( addr -- )"),						// 17
+DEF_FORTH_WORD( "(to)",		 0, forth_to_runtime,	 "( ?*x  -- )"),						// 18
 #endif
 DEF_FORTH_WORD(0, 0, 0, 0)
 };
@@ -4956,6 +4984,7 @@ const forth_xt_t forth_ppLOOP_xt			= (const forth_xt_t)&(forth_wl_system[14]);
 const forth_xt_t forth_pDOES_xt				= (const forth_xt_t)&(forth_wl_system[15]);
 const forth_xt_t forth_pABORTq_xt			= (const forth_xt_t)&(forth_wl_system[16]);
 const forth_xt_t forth_DO_VOC_xt			= (const forth_xt_t)&(forth_wl_system[17]);
+const forth_xt_t forth_TO_RT_xt				= (const forth_xt_t)&(forth_wl_system[18]);
 #endif
 // -----------------------------------------------------------------------------------------------
 // Get the size of the Forth runtime context structure.

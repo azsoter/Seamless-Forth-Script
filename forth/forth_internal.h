@@ -245,6 +245,7 @@ extern const forth_xt_t forth_ppLOOP_xt;
 extern const forth_xt_t forth_pDOES_xt;
 extern const forth_xt_t forth_pABORTq_xt;
 extern const forth_xt_t forth_DO_VOC_xt;
+extern const forth_xt_t forth_TO_RT_xt;
 
 extern int forth_InitSearchOrder(forth_runtime_context_t *ctx, forth_cell_t *wordlists, forth_cell_t slots);
 extern void forth_forth_wordlist(forth_runtime_context_t *ctx);
@@ -546,7 +547,8 @@ extern void forth_plus_loop(forth_runtime_context_t *ctx);
 extern void forth_literal(forth_runtime_context_t *ctx);
 extern void forth_xliteral(forth_runtime_context_t *ctx);
 extern void forth_2literal(forth_runtime_context_t *ctx);
-extern void forth_to(forth_runtime_context_t *ctx);
+extern void forth_to(forth_runtime_context_t *ctx);			// TO
+extern void forth_to_runtime(forth_runtime_context_t *ctx); // (TO)
 extern void forth_sliteral(forth_runtime_context_t *ctx);
 extern void forth_variable(forth_runtime_context_t *ctx);
 extern void forth_2variable(forth_runtime_context_t *ctx);
