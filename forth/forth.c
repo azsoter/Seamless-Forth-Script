@@ -3050,28 +3050,7 @@ void forth_quit(forth_runtime_context_t *ctx)
 
     while(1)
     {
-        if (0 == ctx->state)
-        {
-#if 1
-        	// We really do need to bail out if there is no output to write to.
-        	// Otherwise we are just going to get looping here when someone throws a -57
-        	// because writing is not possible.
-        	// This can actually happen if the output can close (such as on a network connection).
-
-        	if ((0 == ctx->write_string) || (0 > ctx->write_string(ctx, "OK", 2)))
-        	{
-        		break;
-        	}
-
-            if ((0 == ctx->send_cr) || (0 > ctx->send_cr(ctx)))
-            {
-            	break;
-            }
-#else
-            forth_TYPE0(ctx, "OK");
-            forth_cr(ctx);
-#endif
-        }
+        
 
         forth_refill(ctx);
 
@@ -3080,7 +3059,26 @@ void forth_quit(forth_runtime_context_t *ctx)
             break;
         }
 
-        if (0 != forth_RUN_INTERPRET(ctx))
+        if (0 == forth_RUN_INTERPRET(ctx))
+		{
+        	// We really do need to bail out if there is no output to write to.
+        	// Otherwise we are just going to get looping here when someone throws a -57
+        	// because writing is not possible.
+        	// This can actually happen if the output can close (such as on a network connection).
+			if (0 == ctx->state)
+        	{
+        		if ((0 == ctx->write_string) || (0 > ctx->write_string(ctx, "OK", 2)))
+        		{
+        			break;
+        		}
+
+            	if ((0 == ctx->send_cr) || (0 > ctx->send_cr(ctx)))
+            	{
+            		break;
+            	}
+			}
+		}
+		else
 		{
 			ctx->sp = ctx->sp0;
 			ctx->rp = ctx->rp0;
