@@ -4474,20 +4474,6 @@ void forth_SEE_THREADED(forth_runtime_context_t *ctx, forth_xt_t xt)
 			ip+= 4;	// sizeof(forth_vocabulary_entry_struct) in cells.
 			forth_TYPE0(ctx, "does> ");
 		}
-	#if defined(FORTH_INCLUDE_LOCALS)
-	else if (forth_init_locals_xt == x)
-		{
-			tmp = ip[1];
-			ip += 1;
-			forth_TYPE0(ctx, " [ ' ");
-			forth_TYPE0(ctx, (const char *)x->name);
-			forth_TYPE0(ctx, " COMPILE, ");
-			forth_PUSH(ctx, tmp);
-			forth_dot(ctx);
-			forth_TYPE0(ctx, ", ] ");
-			forth_space(ctx);
-		}
-	#endif
 		else
 		{
 			forth_PRINT_NAME(ctx, x);

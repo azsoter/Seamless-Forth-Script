@@ -26,6 +26,7 @@ test_curses: $(OBJ_CURSES)
 
 run-tests:	test quick-tests.txt
 	./test <quick-tests.txt >results.txt
+	./test <local-tests.txt >>results.txt
 
 .PHONY: clean
 

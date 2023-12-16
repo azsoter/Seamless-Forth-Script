@@ -30,76 +30,77 @@
 #include <forth_internal.h>
 #include <string.h>
 
-#if 1 || !defined(FORTH_WITHOUT_COMPILATION) && defined(FORTH_INCLUDE_LOCALS)
-
+#if !defined(FORTH_WITHOUT_COMPILATION) && defined(FORTH_INCLUDE_LOCALS)
 void forth_init_locals(forth_runtime_context_t *ctx)
 {
-    forth_cell_t count;
+    forth_cell_t count = forth_POP(ctx);
 
-    if (0 == ctx->ip)
-	{
-		forth_THROW(ctx, -9); // Invalid address.
-	}
-
-    count = *(ctx->ip++);
-    
     while (count--)
     {
         forth_RPUSH(ctx, forth_POP(ctx));
     }
 }
 
-//const forth_vocabulary_entry_t forth_init_locals_XT = DEF_FORTH_WORD("init-locals",        0, forth_init_locals,     "( n*x -- )");
+void forth_uninitialized_locals(forth_runtime_context_t *ctx)
+{
+    forth_cell_t count = forth_POP(ctx);
+
+    while (count--)
+    {
+        forth_PUSH(ctx, 0);
+    }
+}
 
 const forth_vocabulary_entry_t forth_wl_local_support[] =
 {
-    DEF_FORTH_WORD("--init-locals--",   0, forth_init_locals,     "( n*x -- )"),            // 0
-    DEF_FORTH_WORD("--uninitialized--", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, 0),
+    DEF_FORTH_WORD("<init-locals>",   0, forth_init_locals,     "( n*x -- )"),                      // 0
+    DEF_FORTH_WORD("<uninitialized-locals>", 0, forth_uninitialized_locals, "( n -- x0..xn )"),     // 1
     DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
 const forth_xt_t forth_init_locals_xt   = (const forth_xt_t)&(forth_wl_local_support[0]);
-const forth_xt_t forth_uninitialized_local_xt   = (const forth_xt_t)&(forth_wl_local_support[1]);
+const forth_xt_t forth_uninitialized_locals_xt   = (const forth_xt_t)&(forth_wl_local_support[1]);
 
 const forth_vocabulary_entry_t forth_wl_local_variables[] =
 {
-    DEF_FORTH_WORD("local[0x00]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x00, 0),
-    DEF_FORTH_WORD("local[0x01]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x01, 0),
-    DEF_FORTH_WORD("local[0x02]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x02, 0),
-    DEF_FORTH_WORD("local[0x03]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x03, 0),
-    DEF_FORTH_WORD("local[0x04]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x04, 0),
-    DEF_FORTH_WORD("local[0x05]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x05, 0),
-    DEF_FORTH_WORD("local[0x06]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x06, 0),
-    DEF_FORTH_WORD("local[0x07]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x07, 0),
-    DEF_FORTH_WORD("local[0x08]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x08, 0),
-    DEF_FORTH_WORD("local[0x09]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x09, 0),
-    DEF_FORTH_WORD("local[0x0a]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0a, 0),
-    DEF_FORTH_WORD("local[0x0b]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0b, 0),
-    DEF_FORTH_WORD("local[0x0c]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0c, 0),
-    DEF_FORTH_WORD("local[0x0d]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0d, 0),
-    DEF_FORTH_WORD("local[0x0e]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0e, 0),
-    DEF_FORTH_WORD("local[0x0f]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0f, 0),
+    DEF_FORTH_WORD("LOC[00]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x00, 0),
+    DEF_FORTH_WORD("LOC[01]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x01, 0),
+    DEF_FORTH_WORD("LOC[02]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x02, 0),
+    DEF_FORTH_WORD("LOC[03]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x03, 0),
+    DEF_FORTH_WORD("LOC[04]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x04, 0),
+    DEF_FORTH_WORD("LOC[05]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x05, 0),
+    DEF_FORTH_WORD("LOC[06]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x06, 0),
+    DEF_FORTH_WORD("LOC[07]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x07, 0),
+    DEF_FORTH_WORD("LOC[08]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x08, 0),
+    DEF_FORTH_WORD("LOC[09]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x09, 0),
+    DEF_FORTH_WORD("LOC[0a]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0a, 0),
+    DEF_FORTH_WORD("LOC[0b]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0b, 0),
+    DEF_FORTH_WORD("LOC[0c]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0c, 0),
+    DEF_FORTH_WORD("LOC[0d]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0d, 0),
+    DEF_FORTH_WORD("LOC[0e]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0e, 0),
+    DEF_FORTH_WORD("LOC[0f]@", FORTH_XT_FLAGS_ACTION_LOCAL, 0x0f, 0),
 
-    DEF_FORTH_WORD("local[0x00]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x00, 0),
-    DEF_FORTH_WORD("local[0x01]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x01, 0),
-    DEF_FORTH_WORD("local[0x02]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x02, 0),
-    DEF_FORTH_WORD("local[0x03]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x03, 0),
-    DEF_FORTH_WORD("local[0x04]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x04, 0),
-    DEF_FORTH_WORD("local[0x05]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x05, 0),
-    DEF_FORTH_WORD("local[0x06]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x06, 0),
-    DEF_FORTH_WORD("local[0x07]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x07, 0),
-    DEF_FORTH_WORD("local[0x08]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x08, 0),
-    DEF_FORTH_WORD("local[0x09]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x09, 0),
-    DEF_FORTH_WORD("local[0x0a]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0a, 0),
-    DEF_FORTH_WORD("local[0x0b]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0b, 0),
-    DEF_FORTH_WORD("local[0x0c]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0c, 0),
-    DEF_FORTH_WORD("local[0x0d]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0d, 0),
-    DEF_FORTH_WORD("local[0x0e]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0e, 0),
-    DEF_FORTH_WORD("local[0x0f]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0f, 0),
+    DEF_FORTH_WORD("LOC[00]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x00, 0),
+    DEF_FORTH_WORD("LOC[01]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x01, 0),
+    DEF_FORTH_WORD("LOC[02]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x02, 0),
+    DEF_FORTH_WORD("LOC[03]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x03, 0),
+    DEF_FORTH_WORD("LOC[04]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x04, 0),
+    DEF_FORTH_WORD("LOC[05]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x05, 0),
+    DEF_FORTH_WORD("LOC[06]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x06, 0),
+    DEF_FORTH_WORD("LOC[07]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x07, 0),
+    DEF_FORTH_WORD("LOC[08]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x08, 0),
+    DEF_FORTH_WORD("LOC[09]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x09, 0),
+    DEF_FORTH_WORD("LOC[0a]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0a, 0),
+    DEF_FORTH_WORD("LOC[0b]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0b, 0),
+    DEF_FORTH_WORD("LOC[0c]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0c, 0),
+    DEF_FORTH_WORD("LOC[0d]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0d, 0),
+    DEF_FORTH_WORD("LOC[0e]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0e, 0),
+    DEF_FORTH_WORD("LOC[0f]!", FORTH_XT_FLAGS_ACTION_LOCAL, FORTH_LOCALS_WRITE_MASK|0x0f, 0),
 
     DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
+// Find a local. Return the appropriate XT for read or write operation.
 const forth_vocabulary_entry_t *forth_find_local(forth_runtime_context_t *ctx, const char *name, forth_cell_t len, int write)
 {
     forth_dictionary_t *dict = ctx->dictionary;
@@ -155,8 +156,10 @@ void forth_paren_local(forth_runtime_context_t *ctx)
         if (0 != dict->local_count)
         {
             ((forth_vocabulary_entry_t *)(ctx->defining))->flags |= FORTH_XT_FLAGS_LOCALS;
+            forth_PUSH(ctx, dict->local_count);
+            forth_literal(ctx);
             forth_COMPILE_COMMA(ctx , forth_init_locals_xt);
-            forth_COMMA(ctx, dict->local_count);
+            //forth_COMMA(ctx, dict->local_count);
         }
     }
     else
@@ -165,7 +168,6 @@ void forth_paren_local(forth_runtime_context_t *ctx)
         {
             if (forth_COMPARE_NAMES(dict->local_names[i], (char *)name, len))
             {
-                //int forth_COMPARE_NAMES(const char *name, const char *input_word, int input_word_length)
                 forth_THROW(ctx, -32); // Invalid name argument -- not sure what to throw if two locals have the same name.
             }
         }
@@ -283,10 +285,15 @@ void forth_brace_colon(forth_runtime_context_t *ctx)
 
     if (0 != (arg_count + local_count))
     {
-        for (i = 0; i < local_count; i++)
+        if (0 != local_count)
         {
-            forth_COMPILE_COMMA(ctx, forth_uninitialized_local_xt);
-            forth_paren_local(ctx);
+            forth_PUSH(ctx, local_count);
+            forth_literal(ctx);
+            forth_COMPILE_COMMA(ctx, forth_uninitialized_locals_xt);
+            for (i = 0; i < local_count; i++)
+            {
+                forth_paren_local(ctx);
+            }
         }
 
         for (i = 0; i < arg_count; i++)

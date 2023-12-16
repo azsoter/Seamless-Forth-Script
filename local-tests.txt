@@ -1,0 +1,6 @@
+.( ---------------------------------- Local Tests ---------------------------------- ) cr
+: lt1 0 locals| z x y | x . y . x y + to z z . cr ; see lt1
+1 2 lt1 .s cr
+
+: lt2 {: a1 a2 | l1 l2 -- x :} a1 to l1 a2 to l2 l1 . l2 . l1 l2 + ; see lt2
+3 4 lt2 .s cr . cr
