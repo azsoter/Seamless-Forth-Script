@@ -61,7 +61,8 @@ typedef forth_vocabulary_entry_t *forth_xt_t;
 #define DEF_FORTH_WORD(N, F, M, D)	{ (forth_cell_t)N, F, (forth_ucell_t)D, (forth_ucell_t)M }
 #endif
 
-#define FORTH_XT_FLAGS_IMMEDIATE 		0x80
+#define FORTH_XT_FLAGS_IMMEDIATE 		0x80	// The word is immediate.
+#define FORTH_XT_FLAGS_LOCALS 			0x40	// The word has local variables.
 
 #define FORTH_XT_FLAGS_ACTION_MASK		0x0f
 #define FORTH_XT_FLAGS_ACTION_PRIMITIVE	0x00
@@ -298,8 +299,10 @@ extern void forth_COMMA(forth_runtime_context_t *ctx, forth_cell_t x);
 #if defined(FORTH_INCLUDE_LOCALS)
 extern void forth_paren_local(forth_runtime_context_t *ctx); // (LOCAL)
 extern void forth_locals_bar(forth_runtime_context_t *ctx); // LOCALS|
+extern void forth_brace_colon(forth_runtime_context_t *ctx); // {: args | locals -- outputs :}
 extern const forth_vocabulary_entry_t *forth_find_local(forth_runtime_context_t *ctx, const char *name, forth_cell_t len, int write);
 extern const forth_xt_t forth_init_locals_xt;
+extern const forth_xt_t forth_uninitialized_local_xt;
 #endif
 
 #endif

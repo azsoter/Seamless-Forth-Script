@@ -54,10 +54,12 @@ void forth_init_locals(forth_runtime_context_t *ctx)
 const forth_vocabulary_entry_t forth_wl_local_support[] =
 {
     DEF_FORTH_WORD("--init-locals--",   0, forth_init_locals,     "( n*x -- )"),            // 0
+    DEF_FORTH_WORD("--uninitialized--", FORTH_XT_FLAGS_ACTION_CONSTANT, 0, 0),
     DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
 const forth_xt_t forth_init_locals_xt   = (const forth_xt_t)&(forth_wl_local_support[0]);
+const forth_xt_t forth_uninitialized_local_xt   = (const forth_xt_t)&(forth_wl_local_support[1]);
 
 const forth_vocabulary_entry_t forth_wl_local_variables[] =
 {
@@ -143,10 +145,19 @@ void forth_paren_local(forth_runtime_context_t *ctx)
         forth_THROW(ctx, -19); // Definition name too long.
     }
 
+    if (0 == ctx->defining)
+    {
+        forth_THROW(ctx, -14); // Interpreting a compile-only word.
+    }
+
     if (0 == len)
     {
-        forth_COMPILE_COMMA(ctx , forth_init_locals_xt);
-        forth_COMMA(ctx, dict->local_count);
+        if (0 != dict->local_count)
+        {
+            ((forth_vocabulary_entry_t *)(ctx->defining))->flags |= FORTH_XT_FLAGS_LOCALS;
+            forth_COMPILE_COMMA(ctx , forth_init_locals_xt);
+            forth_COMMA(ctx, dict->local_count);
+        }
     }
     else
     {
@@ -175,6 +186,12 @@ void forth_locals_bar(forth_runtime_context_t *ctx)
 {
     char *name;
     forth_cell_t len;
+
+    if (0 == ctx->state)
+    {
+        forth_THROW(ctx, -14); // Interpreting a compile-only word.
+    }
+
     while(1)
     {
         forth_parse_name(ctx);
@@ -199,6 +216,87 @@ void forth_locals_bar(forth_runtime_context_t *ctx)
             forth_PUSH(ctx, len);
             forth_paren_local(ctx);
         }
+    }
+}
+
+// {: ARGn ... ARG0 | LOCALn ... LOCAL0 -- outputs :}
+void forth_brace_colon(forth_runtime_context_t *ctx)
+{
+    char *name;
+    forth_cell_t len;
+    forth_cell_t i;
+    forth_cell_t arg_count = 0;
+    forth_cell_t local_count = 0;
+    int parsing_locals = 0;
+    int parsing_output = 0;
+    
+
+    if (0 == ctx->state)
+    {
+        forth_THROW(ctx, -14); // Interpreting a compile-only word.
+    }
+
+    while(1)
+    {
+        forth_parse_name(ctx);
+        len = forth_POP(ctx);
+        name = (char *)forth_POP(ctx);
+
+        if (0 == len)
+        {
+            forth_THROW(ctx, -16); // Attempt to use zero-length string as a name.
+        }
+
+        if ((1 == len) && ('|' == name[0]))
+        {
+            parsing_locals = 1;
+            continue;
+        }
+        else if (2 == len)
+        {
+            if (('-' == name[0]) && ('-' == name[1]))
+            {
+                parsing_output = 1;
+                continue;
+            }
+            else if ((':' == name[0]) && ('}' == name[1]))
+            {
+                break;
+            }
+        }
+
+        if (!parsing_output)
+        {
+            forth_PUSH(ctx, (forth_cell_t)name);
+            forth_PUSH(ctx, len);
+
+            if (parsing_locals)
+            {
+                local_count++;
+            }
+            else
+            {
+                arg_count++;
+            }
+        }
+    }
+
+    if (0 != (arg_count + local_count))
+    {
+        for (i = 0; i < local_count; i++)
+        {
+            forth_COMPILE_COMMA(ctx, forth_uninitialized_local_xt);
+            forth_paren_local(ctx);
+        }
+
+        for (i = 0; i < arg_count; i++)
+        {
+            forth_paren_local(ctx);
+        }
+
+        forth_PUSH(ctx, 0);
+        forth_PUSH(ctx, 0);
+        forth_paren_local(ctx);
     }
 }
 #endif
