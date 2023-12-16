@@ -3443,23 +3443,6 @@ void forth_plus_loop(forth_runtime_context_t *ctx)
 }
 #endif
 
-#if defined(FORTH_INCLUDE_LOCALS)
-// Details of how local variables are implemented.
-void forth_DoLocal(forth_runtime_context_t *ctx, forth_xt_t xt)
-{
-	forth_scell_t ix = (forth_scell_t)(xt->meaning & ((forth_cell_t)(FORTH_LOCALS_INDEX_MASK)));
-
-	if (0 == (xt->meaning & (forth_cell_t)(FORTH_LOCALS_WRITE_MASK)))
-	{
-		forth_PUSH(ctx, ctx->fp[-(ix+1)]);
-	}
-	else
-	{
-		ctx->fp[-(ix+1)] = forth_POP(ctx);
-	}
-}
-#endif
-
 // Details of how constants are implemented.
 void forth_DoConst(forth_runtime_context_t *ctx, forth_xt_t xt)
 {
@@ -4946,11 +4929,14 @@ DEF_FORTH_WORD( "sp!",  	 0, forth_sp_store,      "( sp -- )"),
 DEF_FORTH_WORD( "rp@",  	 0, forth_rp_fetch,      "( -- rp )"),
 DEF_FORTH_WORD( "rp!",  	 0, forth_rp_store,      "( rp -- )"),
 DEF_FORTH_WORD( "rp0",  	 0, forth_rp0,      	 "( -- rp0 )"),
+
 #if defined(FORTH_INCLUDE_LOCALS)
-DEF_FORTH_WORD("(local)",    0, forth_paren_local,     "( c-addr len -- )"),
-DEF_FORTH_WORD("locals|", FORTH_XT_FLAGS_IMMEDIATE, forth_locals_bar,         "LOCALS| local1 local2 ... localn |"),
-DEF_FORTH_WORD("{:", FORTH_XT_FLAGS_IMMEDIATE, forth_brace_colon, "{: ARGn ... ARG0 | LOCALn ... LOCAL0 -- outputs :}"),
+DEF_FORTH_WORD("(local)",    	0, forth_paren_local,     							"( c-addr len -- )"),
+DEF_FORTH_WORD("alloca",   		FORTH_XT_FLAGS_IMMEDIATE, forth_alloca,     		"( size -- addr )"),
+DEF_FORTH_WORD("locals|", 		FORTH_XT_FLAGS_IMMEDIATE, forth_locals_bar,         "LOCALS| local1 local2 ... localn |"),
+DEF_FORTH_WORD("{:", 			FORTH_XT_FLAGS_IMMEDIATE, forth_brace_colon, 		"{: ARGn ... ARG0 | LOCALn ... LOCAL0 -- outputs :}"),
 #endif
+
 DEF_FORTH_WORD( ".version",  0, forth_print_version, "( -- ) Print the version number of the forth engine."),
 DEF_FORTH_WORD( "forth-engine-version", FORTH_XT_FLAGS_ACTION_CONSTANT, FORTH_ENGINE_VERSION, "( -- v ) The version number of the forth engine."),
 DEF_FORTH_WORD(0, 0, 0, 0)

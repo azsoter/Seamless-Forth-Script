@@ -51,15 +51,59 @@ void forth_uninitialized_locals(forth_runtime_context_t *ctx)
     }
 }
 
+void forth_DoLocal(forth_runtime_context_t *ctx, forth_xt_t xt)
+{
+	forth_scell_t ix = (forth_scell_t)(xt->meaning & ((forth_cell_t)(FORTH_LOCALS_INDEX_MASK)));
+
+	if (0 == (xt->meaning & (forth_cell_t)(FORTH_LOCALS_WRITE_MASK)))
+	{
+		forth_PUSH(ctx, ctx->fp[-(ix+1)]);
+	}
+	else
+	{
+		ctx->fp[-(ix+1)] = forth_POP(ctx);
+	}
+}
+
+// <alloca> // ( size -- addr )
+void forth_alloca_runtime(forth_runtime_context_t *ctx)
+{
+    forth_cell_t size = forth_POP(ctx);
+    forth_cell_t items;
+    size = FORTH_ALIGN(size);
+    items = size / sizeof(forth_cell_t);
+
+    if ((ctx->rp - items) < ctx->rp_min)
+    {
+        forth_THROW(ctx, -5); // Return stack overflow.
+    }
+    ctx->rp -= items;
+    forth_PUSH(ctx, (forth_cell_t)(ctx->rp));
+}
+
+// alloca // ( size -- addr )
+void forth_alloca(forth_runtime_context_t *ctx)
+{
+    if ((0 == ctx->state) || (0 == ctx->defining))
+    {
+        forth_THROW(ctx, -14); // 	Interpreting a compile-only word.
+    }
+
+    ((forth_vocabulary_entry_t *)(ctx->defining))->flags |= FORTH_XT_FLAGS_LOCALS;
+    forth_COMPILE_COMMA(ctx, forth_alloca_runtime_xt);
+}
+
 const forth_vocabulary_entry_t forth_wl_local_support[] =
 {
     DEF_FORTH_WORD("<init-locals>",   0, forth_init_locals,     "( n*x -- )"),                      // 0
     DEF_FORTH_WORD("<uninitialized-locals>", 0, forth_uninitialized_locals, "( n -- x0..xn )"),     // 1
+    DEF_FORTH_WORD("<alloca>",   0, forth_alloca_runtime,     "( size -- addr )"),                  // 2
     DEF_FORTH_WORD(0, 0, 0, 0)
 };
 
 const forth_xt_t forth_init_locals_xt   = (const forth_xt_t)&(forth_wl_local_support[0]);
 const forth_xt_t forth_uninitialized_locals_xt   = (const forth_xt_t)&(forth_wl_local_support[1]);
+const forth_xt_t forth_alloca_runtime_xt   = (const forth_xt_t)&(forth_wl_local_support[2]);
 
 const forth_vocabulary_entry_t forth_wl_local_variables[] =
 {
