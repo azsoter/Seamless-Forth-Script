@@ -1,4 +1,6 @@
 : .separator ." \ ---------------------------------------------------------------------------------------------" cr ;
+.version cr
+.separator
 : T" .separator ." \ " " type cr ." \ " ;
 T" Threaded code calling threaded code."
 : (t1) 1 2 + . ; : t1 3 4 + . (t1) 5 6 + . ; see t1 t1

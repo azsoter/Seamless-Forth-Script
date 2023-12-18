@@ -388,7 +388,9 @@ void forth_catch(forth_runtime_context_t *ctx)
 		ctx->rp = saved_rp;
         ctx->sp = (forth_cell_t *)ctx->rp[1];
 		ctx->ip = (forth_cell_t *)ctx->rp[2];
+#if defined(FORTH_INCLUDE_LOCALS)
 		ctx->fp = (forth_cell_t *)ctx->rp[3];
+#endif
         *(ctx->sp) = res;
     }
 

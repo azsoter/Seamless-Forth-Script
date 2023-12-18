@@ -5,5 +5,10 @@
 : lt2 {: a1 a2 | l1 l2 -- x :} a1 to l1 a2 to l2 l1 . l2 . l1 l2 + ; see lt2
 3 4 lt2 .s cr . cr
 
-: aa {: | a l :} 15 alloca to a s" Hello World!" dup to l a swap move a l type cr ; see aa
+: lt3 {: -- some-stuff :} ; see lt3 lt3
+
+: h1 0 0 locals| a b | -18 throw ( Just some random exception. ) ; see h1
+: h2 {: c d :} ['] h1 catch . c . d . cr ; see h2 8 9 h2
+
+: aa {: | a l :} s" Hello World!" dup to l dup alloca to a a swap move a l type cr ; see aa
 aa

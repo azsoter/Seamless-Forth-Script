@@ -34,7 +34,7 @@ extern "C" {
 
 #include <forth_config.h>
 
-#define FORTH_ENGINE_VERSION 5
+#define FORTH_ENGINE_VERSION 0x0100
 
 // Some of the structs are defined in forth_internals.h because their structure is not part of the interface
 // and only the Forth implementation (but not code calling it) needs to know about the details.
