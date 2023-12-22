@@ -3,8 +3,8 @@ CC=gcc
 CFLAGS+= -O3 -Itest-app -Iforth -MMD
 # LDFLAGS=-pthread
 
-OBJ = main.o forth_blk_io.o forth.o forth_search.o forth_configurable.o forth_stdio.o forth_blocks.o forth_locals.o
-OBJ_CURSES = main_test_curses.o forth_blk_io.o forth.o forth_search.o forth_configurable.o forth_blocks.o forth_locals.o
+OBJ = main.o forth_blk_io.o forth.o forth_search.o forth_configurable.o forth_stdio.o forth_blocks.o forth_block_editor.o forth_locals.o
+OBJ_CURSES = main_test_curses.o forth_blk_io.o forth.o forth_search.o forth_configurable.o forth_blocks.o forth_block_editor.o forth_locals.o
 default: test blk
 
 -include $(OBJ:%.o=%.d)

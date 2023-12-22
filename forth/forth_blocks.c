@@ -300,6 +300,10 @@ void forth_thru(forth_runtime_context_t *ctx)
 
 const forth_vocabulary_entry_t forth_wl_blocks[] =
 {
+#if defined(FORTH_INCLUDE_BLOCK_EDITOR)
+DEF_FORTH_WORD( "edit",  	 0, forth_edit,      	    "( blk -- )"),
+#endif
+
 DEF_FORTH_WORD( "list",  	 0, forth_list,      	    "( blk -- )"),
 DEF_FORTH_WORD( "thru",  	 0, forth_thru,      	    "( first_blk last_blk -- )"),
 DEF_FORTH_WORD( "load",  	 0, forth_load,      	    "( blk -- )"),

@@ -36,6 +36,7 @@ forth_block_buffers_t block_buffers;
 int reset_curses(void)
 {
 	cbreak();
+	//raw();
 	noecho();
  	immedok(stdscr,TRUE);
 	scrollok(stdscr,TRUE);

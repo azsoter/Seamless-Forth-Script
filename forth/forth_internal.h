@@ -141,6 +141,11 @@ struct forth_block_buffers
 typedef struct forth_block_buffers forth_block_buffers_t;
 
 extern const forth_vocabulary_entry_t forth_wl_blocks[];
+
+#if defined(FORTH_INCLUDE_BLOCK_EDITOR)
+extern void forth_edit(forth_runtime_context_t *ctx);
+#endif
+
 #endif
 
 // The runtime context passed to each and every function implementing a forth word.
@@ -577,6 +582,57 @@ extern void forth_recurse(forth_runtime_context_t *ctx);
 extern void forth_exit(forth_runtime_context_t *ctx);
 #endif
 
+// Some constant for keys.
+// Trying to use the same values as curses.
+
+#define FORTH_KEY_DOWN				0x0102
+#define FORTH_KEY_UP				0x0103
+#define FORTH_KEY_LEFT				0x0104
+#define FORTH_KEY_RIGHT				0x0105
+#define FORTH_KEY_BACKSPACE			0x0107
+
+#define FORTH_KEY_DELETE			0x014a
+#define FORTH_KEY_INSERT			0x014b
+#define FORTH_KEY_PAGE_UP			0x0153
+#define FORTH_KEY_PAGE_DOWN			0x0152
+#define FORTH_KEY_HOME				0x0106
+#define FORTH_KEY_END				0x0168
+
+#define FORTH_KEY_F1				0x0109
+#define FORTH_KEY_F2				0x010a
+#define FORTH_KEY_F3				0x010b
+#define FORTH_KEY_F4				0x010c
+#define FORTH_KEY_F5				0x010d
+#define FORTH_KEY_F6				0x010e
+#define FORTH_KEY_F7				0x010f
+#define FORTH_KEY_F8				0x0110
+#define FORTH_KEY_F9				0x0111
+#define FORTH_KEY_F10				0x0112
+#define FORTH_KEY_F11				0x0113
+#define FORTH_KEY_F12				0x0114
+
+// Some control characters
+#define FORTH_KEY_CTRL_A			0x0001
+#define FORTH_KEY_CTRL_B			0x0002
+#define FORTH_KEY_CTRL_C			0x0003
+#define FORTH_KEY_CTRL_D			0x0004
+
+#define FORTH_KEY_CTRL_H			0x0008
+#define FORTH_KEY_CTRL_I			0x0009
+
+
+#define FORTH_KEY_CTRL_Q			0x0011
+#define FORTH_KEY_CTRL_R			0x0012
+#define FORTH_KEY_CTRL_S			0x0013
+#define FORTH_KEY_CTRL_V			0x0016
+#define FORTH_KEY_CTRL_X			0x0018
+#define FORTH_KEY_CTRL_Y			0x0019
+#define FORTH_KEY_CTRL_Z			0x001A
+
+#define FORTH_KEY_ESCAPE			0x001B
+
+#define FORTH_KEY_BS 				0x0008 // Same as CTRL-H
+#define FORTH_KEY_ENTER				0x000D
 
 extern void forth_bye(forth_runtime_context_t *ctx);
 
