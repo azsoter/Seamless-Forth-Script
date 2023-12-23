@@ -616,6 +616,7 @@ extern void forth_exit(forth_runtime_context_t *ctx);
 #define FORTH_KEY_CTRL_B			0x0002
 #define FORTH_KEY_CTRL_C			0x0003
 #define FORTH_KEY_CTRL_D			0x0004
+#define FORTH_KEY_CTRL_E			0x0005
 
 #define FORTH_KEY_CTRL_H			0x0008
 #define FORTH_KEY_CTRL_I			0x0009
@@ -624,7 +625,9 @@ extern void forth_exit(forth_runtime_context_t *ctx);
 #define FORTH_KEY_CTRL_Q			0x0011
 #define FORTH_KEY_CTRL_R			0x0012
 #define FORTH_KEY_CTRL_S			0x0013
+#define FORTH_KEY_CTRL_T			0x0014
 #define FORTH_KEY_CTRL_V			0x0016
+#define FORTH_KEY_CTRL_W			0x0017
 #define FORTH_KEY_CTRL_X			0x0018
 #define FORTH_KEY_CTRL_Y			0x0019
 #define FORTH_KEY_CTRL_Z			0x001A

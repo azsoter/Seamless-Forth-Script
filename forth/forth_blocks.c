@@ -169,7 +169,7 @@ void forth_update(forth_runtime_context_t *ctx)
 {
     if (0 == ctx->block_buffers)
     {
-        forth_THROW(ctx, -21);  // 	unsupported operation
+        forth_THROW(ctx, -21);  // 	Unsupported operation.
     }
 
     if ((0 <= ctx->block_buffers->current_buffer_index) || ((FORTH_BLOCK_BUFFERS_COUNT) > ctx->block_buffers->current_buffer_index))

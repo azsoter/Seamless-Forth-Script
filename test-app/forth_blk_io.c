@@ -42,7 +42,7 @@ forth_scell_t forth_READ_BLOCK(forth_cell_t block_number, uint8_t *buffer)
     if (0 == f)
     {
         puts("Could not open block file for reading.");
-        return 1;   // We return 1 to indicated that the file does not exist.
+        return 1;   // We return 1 to indicate that the file does not exist.
     }
 
     if (1 != fread(buffer, 1024, 1 , f))

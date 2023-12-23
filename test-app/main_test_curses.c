@@ -1,6 +1,6 @@
 /*
  * Test program to run on Linux/POSIX.
- * for the Embeddable Forth Command Interpreter.
+ * This version is for the Seamless Forth Scripting Engine.
  * Written by Andras Zsoter.
  * This is a quick and dirty example how to control the Forth Engine on a terminal.
  * You can treat the contents of this file as public domain.
@@ -35,8 +35,8 @@ forth_block_buffers_t block_buffers;
 
 int reset_curses(void)
 {
-	cbreak();
-	//raw();
+	//cbreak();
+	raw();
 	noecho();
  	immedok(stdscr,TRUE);
 	scrollok(stdscr,TRUE);
@@ -113,6 +113,11 @@ forth_cell_t key(struct forth_runtime_context *rctx)
 {
 	char c = getch();
 
+	if (FORTH_KEY_CTRL_C == c)
+	{
+		rctx->user_break = 1;
+	}
+
 	if (127 == c || 8 == c || 7 == c) 	// Ugly, but I have no idea what the proper symbolic names are.
 	{
 		c = '\b';
@@ -124,6 +129,11 @@ forth_cell_t key(struct forth_runtime_context *rctx)
 forth_cell_t key_q(struct forth_runtime_context *rctx)
 {
 	int c = getch();
+
+	if (FORTH_KEY_CTRL_C == c)
+	{
+		rctx->user_break = 1;
+	}
 
 	if (ERR == c)
 	{
@@ -140,6 +150,12 @@ forth_cell_t ekey(struct forth_runtime_context *rctx)
 	return ((forth_cell_t)c) << 8;
 #else
 	forth_cell_t c = getch();
+
+	if (FORTH_KEY_CTRL_C == c)
+	{
+		rctx->user_break = 1;
+	}
+
 	return c;
 #endif
 }
@@ -147,6 +163,11 @@ forth_cell_t ekey(struct forth_runtime_context *rctx)
 forth_cell_t ekey_q(struct forth_runtime_context *rctx)
 {
 	int c = getch();
+
+	if (FORTH_KEY_CTRL_C == c)
+	{
+		rctx->user_break = 1;
+	}
 
 	if (ERR == c)
 	{

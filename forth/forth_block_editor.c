@@ -29,10 +29,14 @@
 #include <forth_config.h>
 #include <forth_internal.h>
 #include <forth.h>
+#include <string.h>
 
 // A quick and dirty block editor.
-// Probably nobody is going to edit a lot of stuff on the target system where this Forth engine is run
-// but it is nice to have some ability to edit stuff if one needs it.
+// Probably nobody is going to edit a lot of stuff on the target system where this Forth engine is running
+// but it is nice to have some ability to edit stuff if one needs that.
+//
+// Key biding may look weird but I am trying to use keys that are not processed by various terminals, telnet, etc.
+//
 
 #if defined(FORTH_INCLUDE_BLOCKS) && defined(FORTH_INCLUDE_BLOCK_EDITOR)
 static void forth_show_block(forth_runtime_context_t *ctx, forth_cell_t src, forth_cell_t x, forth_cell_t y)
@@ -50,27 +54,33 @@ static void forth_edit_at_xy(forth_runtime_context_t *ctx, forth_cell_t x, forth
 static forth_cell_t forth_key_event(forth_runtime_context_t *ctx)
 {
     forth_ekey(ctx);
+    ctx->user_break = 0;
     return forth_POP(ctx);
 }
 
 void forth_edit(forth_runtime_context_t *ctx)
 {
+    forth_cell_t src;
     forth_cell_t event;
     uint8_t *buffer;
-    forth_cell_t src;
-    forth_cell_t x0 = 0;
-    forth_cell_t y0 = 4;
-    forth_cell_t x = 0;
-    forth_cell_t y = 0;
-    forth_cell_t position = 0;
-    forth_cell_t pos;
-    int done = 0;
-    int dirty = 0;
+    uint8_t c;
+    uint8_t x0 = 0;
+    uint8_t y0 = 4;
+    uint8_t x = 0;
+    uint8_t y = 0;
+    uint16_t position = 0;
+    uint16_t pos;
+    int8_t done = 0;
+    int8_t dirty = 0;
+    int8_t f;
+    uint8_t line_buffer[64];
 
     if ((0 == ctx->at_xy) || (0 == ctx->page))
     {
-        forth_THROW(ctx, -21);
+        forth_THROW(ctx, -21); // 	Unsupported operation.
     }
+
+    memset(line_buffer, FORTH_CHAR_SPACE, sizeof(line_buffer));
 
     src = forth_POP(ctx);
     //forth_page(ctx);
@@ -78,6 +88,11 @@ void forth_edit(forth_runtime_context_t *ctx)
     forth_block(ctx);
     buffer = (uint8_t *)forth_POP(ctx);
 
+    forth_page(ctx);
+    forth_TYPE0(ctx, "Press ESC to exit the editor."); forth_cr(ctx);
+    forth_TYPE0(ctx,"CTRL-C/CTRL-Y: Copy Line, CTRL-E: Insert Empty Line, CTRL-X: Cut Line");
+    forth_cr(ctx);
+    forth_TYPE0(ctx,"CTRL-R: Replace (swap) Line, CTRL-W/CTRL-V: OverWrite Line");
     forth_show_block(ctx, src, x0, y0);
 
     while(!done)
@@ -152,7 +167,7 @@ void forth_edit(forth_runtime_context_t *ctx)
 
             case FORTH_KEY_BS: /** FALLTHROUGH **/
             case FORTH_KEY_BACKSPACE:
-                if (0 < position)
+                if ((0 < position) && (0 < x))
                 {
                     position -= 1;
                     pos = position;
@@ -161,7 +176,7 @@ void forth_edit(forth_runtime_context_t *ctx)
                         buffer[pos] = buffer[pos + 1];
                         pos += 1;
                     }
-                    buffer[pos] = 32;
+                    buffer[pos] = FORTH_CHAR_SPACE;
                     dirty = 1;
                 }
                 break;
@@ -173,22 +188,95 @@ void forth_edit(forth_runtime_context_t *ctx)
                     buffer[pos] = buffer[pos + 1];
                     pos += 1;
                 }
-                buffer[pos] = 32;
+                buffer[pos] = FORTH_CHAR_SPACE;
                 dirty = 1;
                 break;
 
             case FORTH_KEY_INSERT:
                 pos = position | 63;
-                if ((pos != position) && (32 == buffer[pos]))
+                if ((pos != position) && (FORTH_CHAR_SPACE == buffer[pos]))
                 {
                     while (pos != position)
                     {
                         buffer[pos] = buffer[pos - 1];
                         pos -= 1;
                     }
-                    buffer[pos] = 32;
+                    buffer[pos] = FORTH_CHAR_SPACE;
                     dirty = 1;
                 }
+                break;
+
+            case FORTH_KEY_CTRL_C:
+            case FORTH_KEY_CTRL_Y:
+                memcpy(line_buffer, buffer + (y * 64), 64);
+                forth_edit_at_xy(ctx, x0 + 0, y0 + 16);
+                forth_PUSH(ctx, (forth_cell_t)line_buffer);
+                forth_PUSH(ctx, 64);
+                forth_type(ctx);
+                break;
+
+            case FORTH_KEY_CTRL_E:  // Insert Empty line.
+                if (y < 15)
+                {
+                    f = 0;
+
+                    for (pos = 0; pos < 64; pos++)
+                    {
+                        if (FORTH_CHAR_SPACE != buffer[(15*64) + pos])
+                        {
+                            f = 1;
+                            break;
+                        }
+                    }
+
+                    if (!f)
+                    {
+                        memmove(&(buffer[64*(y+1)]), &(buffer[64*y]), 1024 - (64 * y));
+                        memset(&(buffer[64*y]), FORTH_CHAR_SPACE, 64);
+                        position = 64*y;
+                        dirty = 1;
+                    }
+                }
+                break;
+
+            case FORTH_KEY_CTRL_X:  // Cut Line.
+                
+                memcpy(line_buffer, buffer + (y * 64), 64);
+                forth_edit_at_xy(ctx, x0 + 0, y0 + 16);
+                forth_PUSH(ctx, (forth_cell_t)line_buffer);
+                forth_PUSH(ctx, 64);
+                forth_type(ctx);
+
+                if (y < 15)
+                {
+                    memmove(&(buffer[64*y]), &(buffer[64*(y+1)]), 1024 - (64 * y));
+                }
+
+                memset(&(buffer[64*15]), FORTH_CHAR_SPACE, 64);
+                position = 64*y;
+                dirty = 1;
+                break;
+
+            case FORTH_KEY_CTRL_W: // OverWrite Line
+                memcpy(&(buffer[64*y]), line_buffer, 64);
+                position = 64*(y + 1);
+                dirty = 1;
+                break;
+
+            case FORTH_KEY_CTRL_R: // Replace Line.
+                for (pos = 0; pos < 64; pos++)
+                {
+                    c = line_buffer[pos];
+                    line_buffer[pos] = buffer[(y * 64) + pos];
+                    buffer[(y * 64) + pos] = c;
+                }
+
+                dirty = 1;
+
+                forth_edit_at_xy(ctx, x0 + 0, y0 + 16);
+                forth_PUSH(ctx, (forth_cell_t)line_buffer);
+                forth_PUSH(ctx, 64);
+                forth_type(ctx);
                 break;
 
             default:
