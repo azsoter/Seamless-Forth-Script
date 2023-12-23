@@ -58,6 +58,15 @@ static forth_cell_t forth_key_event(forth_runtime_context_t *ctx)
     return forth_POP(ctx);
 }
 
+static void forth_edit_print_header(forth_runtime_context_t *ctx)
+{
+    forth_page(ctx);
+    forth_TYPE0(ctx, "Press ESC to exit the editor."); forth_cr(ctx);
+    forth_TYPE0(ctx,"CTRL-C/CTRL-Y: Copy Line, CTRL-E: Insert Empty Line, CTRL-X: Cut Line");
+    forth_cr(ctx);
+    forth_TYPE0(ctx,"CTRL-R: Replace (swap) Line, CTRL-W/CTRL-V: OverWrite Line");
+}
+
 void forth_edit(forth_runtime_context_t *ctx)
 {
     forth_cell_t src;
@@ -88,12 +97,9 @@ void forth_edit(forth_runtime_context_t *ctx)
     forth_block(ctx);
     buffer = (uint8_t *)forth_POP(ctx);
 
-    forth_page(ctx);
-    forth_TYPE0(ctx, "Press ESC to exit the editor."); forth_cr(ctx);
-    forth_TYPE0(ctx,"CTRL-C/CTRL-Y: Copy Line, CTRL-E: Insert Empty Line, CTRL-X: Cut Line");
-    forth_cr(ctx);
-    forth_TYPE0(ctx,"CTRL-R: Replace (swap) Line, CTRL-W/CTRL-V: OverWrite Line");
-    forth_show_block(ctx, src, x0, y0);
+    forth_edit_print_header(ctx);
+
+    // forth_show_block(ctx, src, x0, y0);
 
     while(!done)
     {
@@ -277,6 +283,36 @@ void forth_edit(forth_runtime_context_t *ctx)
                 forth_PUSH(ctx, (forth_cell_t)line_buffer);
                 forth_PUSH(ctx, 64);
                 forth_type(ctx);
+                break;
+
+            case FORTH_KEY_PAGE_DOWN:
+                if ((FORTH_MAX_BLOCKS) > src)
+                {
+                    if (dirty)
+                    {
+                        forth_update(ctx);
+                    }
+                    src += 1;
+                    forth_PUSH(ctx, src);
+                    forth_block(ctx);
+                    buffer = (uint8_t *)forth_POP(ctx);
+                    forth_edit_print_header(ctx);
+                }
+                break;
+
+            case FORTH_KEY_PAGE_UP:
+                if (1 < src)
+                {
+                    if (dirty)
+                    {
+                        forth_update(ctx);
+                    }
+                    src -= 1;
+                    forth_PUSH(ctx, src);
+                    forth_block(ctx);
+                    buffer = (uint8_t *)forth_POP(ctx);
+                    forth_edit_print_header(ctx);
+                }
                 break;
 
             default:
