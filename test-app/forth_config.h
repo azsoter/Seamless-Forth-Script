@@ -50,7 +50,7 @@ extern "C" {
 #if defined(FORTH_INCLUDE_BLOCKS)
 #   define FORTH_INCLUDE_BLOCK_EDITOR
 #   define FORTH_BLOCK_BUFFERS_COUNT 3
-#   define FORTH_MAX_BLOCKS 256
+#   define FORTH_MAX_BLOCKS 16
 #endif
 
 #if !defined(FORTH_WITHOUT_COMPILATION)

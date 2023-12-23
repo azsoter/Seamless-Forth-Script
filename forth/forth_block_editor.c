@@ -31,7 +31,12 @@
 #include <forth.h>
 #include <string.h>
 
-// A quick and dirty block editor.
+// A QUICK & DIRTY block editor, it may not work on all keyboard implementations.
+// One may want to rewrite forth_key_event(ctx) below, if one has a physical keyboard locally plugged into some device,
+// and EKEY is implemented to return really raw information.
+// One problem is that the Forth standards specify 'key events' but telnet etc. sends a sequence of characters, some of which are
+// control characters and I mostly need to work with those.
+//
 // Probably nobody is going to edit a lot of stuff on the target system where this Forth engine is running
 // but it is nice to have some ability to edit stuff if one needs that.
 //
@@ -53,9 +58,13 @@ static void forth_edit_at_xy(forth_runtime_context_t *ctx, forth_cell_t x, forth
 
 static forth_cell_t forth_key_event(forth_runtime_context_t *ctx)
 {
+    forth_cell_t key_event;
     forth_ekey(ctx);
+    // We could do some processing of the event returned by EKEY here, but none of the actual implementations
+    // really do anything useful, so I am just going to return the code returned by EKEY.
     ctx->user_break = 0;
-    return forth_POP(ctx);
+    key_event = forth_POP(ctx);
+    return key_event;
 }
 
 static void forth_edit_print_header(forth_runtime_context_t *ctx)
@@ -64,7 +73,8 @@ static void forth_edit_print_header(forth_runtime_context_t *ctx)
     forth_TYPE0(ctx, "Press ESC to exit the editor."); forth_cr(ctx);
     forth_TYPE0(ctx,"CTRL-C/CTRL-Y: Copy Line, CTRL-E: Insert Empty Line, CTRL-X: Cut Line");
     forth_cr(ctx);
-    forth_TYPE0(ctx,"CTRL-R: Replace (swap) Line, CTRL-W/CTRL-V: OverWrite Line");
+    forth_TYPE0(ctx,"CTRL-R: Replace (swap) Line, CTRL-W/CTRL-V: OverWrite Line"); forth_cr(ctx);
+    forth_TYPE0(ctx, "CTRL-B: Save Buffers.");
 }
 
 void forth_edit(forth_runtime_context_t *ctx)
@@ -106,6 +116,11 @@ void forth_edit(forth_runtime_context_t *ctx)
 
         forth_show_block(ctx, src, x0, y0);
 
+        forth_edit_at_xy(ctx, x0 + 0, y0 + 16);
+        forth_PUSH(ctx, (forth_cell_t)line_buffer);
+        forth_PUSH(ctx, 64);
+        forth_type(ctx);
+
         if (position > 1023)
         {
             position = 1023;
@@ -118,6 +133,13 @@ void forth_edit(forth_runtime_context_t *ctx)
 
         event = forth_key_event(ctx);
 
+        // The following section makes assumptions about what is returned by as a key event.
+        // Not sure what what the original idea of the Forth 'EKEY' would be, but in terminals, telnet sessions, etc.
+        // we end up returning some sort of key events.
+        // In fact I am tryign to standardize the codes used by curses.
+        // It is not always practical to try to figure out actual keys (such as if CTRL/ALT/SHIFT is up or down,
+        // or which one of those is up/down) unless you have a local keyboard.
+        // On most systems I use I really don't have that.
         switch(event)
         {
             case FORTH_KEY_ESCAPE:
@@ -125,7 +147,6 @@ void forth_edit(forth_runtime_context_t *ctx)
                 break;
 
             case FORTH_KEY_ENTER:
-                //position = 64 * ((position + 63) / 64);
                 position = (position + 64) & ~(forth_cell_t)63;
 
                 if (1023 < position)
@@ -215,10 +236,6 @@ void forth_edit(forth_runtime_context_t *ctx)
             case FORTH_KEY_CTRL_C:
             case FORTH_KEY_CTRL_Y:
                 memcpy(line_buffer, buffer + (y * 64), 64);
-                forth_edit_at_xy(ctx, x0 + 0, y0 + 16);
-                forth_PUSH(ctx, (forth_cell_t)line_buffer);
-                forth_PUSH(ctx, 64);
-                forth_type(ctx);
                 break;
 
             case FORTH_KEY_CTRL_E:  // Insert Empty line.
@@ -248,11 +265,7 @@ void forth_edit(forth_runtime_context_t *ctx)
             case FORTH_KEY_CTRL_X:  // Cut Line.
                 
                 memcpy(line_buffer, buffer + (y * 64), 64);
-                forth_edit_at_xy(ctx, x0 + 0, y0 + 16);
-                forth_PUSH(ctx, (forth_cell_t)line_buffer);
-                forth_PUSH(ctx, 64);
-                forth_type(ctx);
-
+            
                 if (y < 15)
                 {
                     memmove(&(buffer[64*y]), &(buffer[64*(y+1)]), 1024 - (64 * y));
@@ -278,11 +291,6 @@ void forth_edit(forth_runtime_context_t *ctx)
                 }
 
                 dirty = 1;
-
-                forth_edit_at_xy(ctx, x0 + 0, y0 + 16);
-                forth_PUSH(ctx, (forth_cell_t)line_buffer);
-                forth_PUSH(ctx, 64);
-                forth_type(ctx);
                 break;
 
             case FORTH_KEY_PAGE_DOWN:
@@ -313,6 +321,14 @@ void forth_edit(forth_runtime_context_t *ctx)
                     buffer = (uint8_t *)forth_POP(ctx);
                     forth_edit_print_header(ctx);
                 }
+                break;
+
+            case FORTH_KEY_CTRL_B:
+                if (dirty)
+                {
+                    forth_update(ctx);
+                }
+                forth_save_buffers(ctx);
                 break;
 
             default:
